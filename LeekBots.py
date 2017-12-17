@@ -25,7 +25,7 @@ class Settings:
 
     def get(self):
         if self.settings is None:
-            self.settings = {'farmers': {}}
+            self.settings = {'farmers': {}, 'pools': {'main': {}}}
             if os.path.exists(
                     self.filePath) and os.path.getsize(self.filePath) > 0:
                 with open(self.filePath) as json_data_file:
@@ -41,10 +41,27 @@ class Settings:
         if not self.settings['farmers'].get(str(id)) is None:
             raise ValueError('Farmer {0}: Allready added'.format(login))
 
-        self.settings['farmers'][id] = {
-            'login': login,
-            'password': password
-        }
+        self.settings['farmers'][id] = {'login': login, 'password': password}
+        self.save()
+
+    def getPools(self):
+        return self.get()['pools']
+
+    def addPool(self, pool):
+        if not self.settings['pools'].get(pool) is None:
+            raise ValueError('Pool {0}: Allready added'.format(pool))
+
+        self.settings['pools'][pool] = {}
+        self.save()
+
+    def addLeek(self, pool, id, farmer):
+        if self.settings['pools'].get(pool) is None:
+            raise ValueError('Pool {0}: Doesn\'t exists'.format(pool))
+        if not self.settings['pools'][pool].get(str(id)) is None:
+            raise ValueError('Leek {0}: Allready added in Pool {1}'.format(
+                id, pool))
+
+        self.settings['pools'][pool][id] = str(farmer)
         self.save()
 
 
@@ -54,6 +71,12 @@ class Farmers:
         if not r.get('success', False):
             raise ValueError('{0}: {1}'.format(login, r.get('error', 'Fail')))
         return Farmer(r)
+
+    def farmer(id):
+        login = Settings().getFarmers().get(id)
+        if login is None:
+            raise ValueError('Can\'t find Farmer "{0}"'.format(id))
+        return Farmers.login(login['login'], login['password'])
 
     def get():
         farmers = []
@@ -66,8 +89,8 @@ class Farmers:
                 print(format(err))
         return farmers
 
-    def list(options):
-        mode = options[0]
+    def list(params, options):
+        mode = params[0]
         if mode is None:
             farmers = Settings().getFarmers()
             for farmer in farmers:
@@ -92,9 +115,9 @@ class Farmers:
                             farmer.leeks[id]['level'],
                             farmer.leeks[id]['talent']))
 
-    def stats(options):
+    def stats(params, options):
         print('Deprecated: use "pool stats"')
-        mode = options[0]
+        mode = params[0]
         if mode == 'infos':
             fields = {'talent': [], 'fights': [], 'habs': []}
         for farmer in Farmers.get():
@@ -106,9 +129,9 @@ class Farmers:
                 fields[field]), int(sum(fields[field]) / len(fields[field])),
                                                max(fields[field])))
 
-    def register(options):
-        login = options[0]
-        password = options[1]
+    def register(params, options):
+        login = params[0]
+        password = params[1]
         try:
             farmer = Farmers.login(login, password)
             Settings().addFarmer(farmer.id, login, password)
@@ -116,8 +139,8 @@ class Farmers:
         except ValueError as err:
             print(format(err))
 
-    def buy(options):
-        item = options[0]
+    def buy(params, options):
+        item = params[0]
         for farmer in Farmers.get():
             try:
                 for x in (farmer.chips + farmer.weapons):
@@ -129,8 +152,8 @@ class Farmers:
             except ValueError as err:
                 print(format(err))
 
-    def sell(options):
-        item = options[0]
+    def sell(params, options):
+        item = params[0]
         for farmer in Farmers.get():
             try:
                 farmer.sell(item)
@@ -139,52 +162,67 @@ class Farmers:
                 print(format(err))
 
 
-class FirstLeeks:
-    def fight(options):
-        print('Deprecated: use "pool fight"')
-        #NOTE: In pools use pool's ids and not name.startswith
-        random.seed()
-        farmers = Farmers.get()
-        random.shuffle(farmers)
-        for farmer in farmers:
+class Pools:
+    def list(params, options):
+        print('TODO add params (leeks, ...)')
+        print(', '.join(Settings().getPools()))
+
+
+class Pool:
+    def parse(options):
+        pool = options.get('pool', 'main')
+        print('Using "{0}" pool'.format(pool))
+        return pool
+
+    def get(pid):
+        pool = Settings().getPools().get(pid)
+        farmers = Settings().getFarmers()
+        if pool is None:
+            raise ValueError('Pool {0}: Doesn\'t exists'.format(pid))
+        leeks = []
+        for leek in pool:
             try:
-                fights = options[0] if type(
-                    options[0]) is int else farmer.fights
-                if fights < 1:
-                    farmer.raiseError('No more fights')
-
-                leek = farmer.getLeek(farmer.getFirstLeekId())
-                for _ in range(fights):
-                    opponents = leek.getOpponents()
-                    if len(opponents) < 1:
-                        leek.raiseError('Probably no more fights')
-
-                    opponents = [
-                        x['id'] for x in opponents
-                        if options[1] == 'force'
-                        or not x['name'].startswith('LeekBots')
-                    ]
-                    if len(opponents) < 1:
-                        leek.raiseError(
-                            'Really? All your opponnents are allies')
-
-                    print('https://leekwars.com/fight/{0}'.format(
-                        leek.fight(random.choice(opponents))))
+                leeks.append(
+                    Farmers.login(
+                        farmers[pool[leek]]['login'],
+                        farmers[pool[leek]]['password']).getLeek(leek))
             except ValueError as err:
                 print(format(err))
+        return leeks
 
-    def list(options):
-        print('Deprecated: use "pool list"')
-        for farmer in Farmers.get():
-            try:
-                leek = farmer.getLeek(farmer.getFirstLeekId())
+    def create(params, options):
+        try:
+            Settings().addPool(Pool.parse(options))
+        except ValueError as err:
+            print(format(err))
+
+    def register(params, options):
+        try:
+            pool = Pool.parse(options)
+            lid = params[0]
+            fid = None
+            for farmer in Farmers.get():
+                if lid in farmer.leeks:
+                    fid = farmer.id
+            if fid is None:
+                raise ValueError(
+                    'Any register farmer for leek "{0}"'.format(lid))
+            Settings().addLeek(pool, lid, fid)
+            print('OK')
+        except ValueError as err:
+            print(format(err))
+
+    def list(params, options):
+        try:
+            for leek in Pool.get(Pool.parse(options)):
                 print(leek.name)
-                if len(options) == 1:
-                    mode = options[0]
+                if len(params) == 1:
+                    mode = params[0]
                     if mode == 'infos':
                         for field in ['id', 'talent', 'level']:
                             print('  {0} : {1}'.format(field,
                                                        leek.data[field]))
+                        print('  fights : {0}'.format(leek.farmer.fights))
                     elif mode == 'stuff':
                         for item in leek.weapons + leek.chips:
                             print('  {0}'.format(item['template']))
@@ -196,14 +234,15 @@ class FirstLeeks:
                         ]:
                             print('  {0} : {1}'.format(field,
                                                        leek.data[field]))
-            except ValueError as err:
-                print(format(err))
+        except ValueError as err:
+            print(format(err))
 
-    def stats(options):
-        print('Deprecated: use "pool stats"')
-        mode = options[0]
+    def stats(params, options):
+        mode = params[0]
         if mode == 'infos':
             fields = {'talent': [], 'level': []}
+        elif mode == 'farmers':
+            fields = {'fights': [], 'habs': []}
         elif mode == 'characteristics':
             fields = {
                 'life': [],
@@ -218,150 +257,219 @@ class FirstLeeks:
                 'frequency': [],
                 'capital': []
             }
-        for farmer in Farmers.get():
-            try:
-                leek = farmer.getLeek(farmer.getFirstLeekId())
+        try:
+            for leek in Pool.get(Pool.parse(options)):
                 for field in fields:
-                    fields[field].append(leek.data[field])
-            except ValueError as err:
-                print(format(err))
+                    fields[field].append(leek.data[field] if mode != 'farmers'
+                                         else leek.farmer.data[field])
+        except ValueError as err:
+            print(format(err))
         print('value : min, avg, max')
         for field in fields:
             print('{0} : {1}, {2}, {3}'.format(field, min(
                 fields[field]), int(sum(fields[field]) / len(fields[field])),
                                                max(fields[field])))
 
-    def setupAI(options):
-        print('Deprecated: use "pool ais"')
+    def fight(params, options):
         try:
-            if not os.path.exists('ai'):
-                raise ValueError('Can\'t find "ai" folder')
+            random.seed()
+            leeks = Pool.get(Pool.parse(options))
+            leeksids = [x.id for x in leeks]
+            random.shuffle(leeks)
+            force = (params[1] == 'force')
+            for leek in leeks:
+                try:
+                    fights = params[0] if type(params[0]) is int else leek.farmer.fights
+                    if fights < 1:
+                        leek.raiseError('No more fights')
+
+                    for _ in range(fights):
+                        opponents = leek.getOpponents()
+                        if len(opponents) < 1:
+                            leek.raiseError('Probably, no more fights')
+
+                        opponents = [
+                            x['id'] for x in opponents
+                            if force or not x['id'] in leeksids
+                        ]
+                        if len(opponents) < 1:
+                            leek.raiseError(
+                                'Really? All your opponnents are allies')
+
+                        print('https://leekwars.com/fight/{0}'.format(
+                            leek.fight(random.choice(opponents))))
+                except ValueError as err:
+                    print(format(err))
+        except ValueError as err:
+            print(format(err))
+
+    def setupAI(params, options):
+        try:
+            pool = Pool.parse(options)
+            path = os.path.join('ai', pool)
+            if not os.path.exists(path):
+                raise ValueError('Can\'t find "{0}" folder'.format(path))
 
             ais = {}
-            for fileName in os.listdir('ai'):
+            for fileName in os.listdir(path):
                 if fileName.endswith('.leek'):
-                    with open(os.path.join('ai', fileName), 'r') as myfile:
-                        ais[fileName[:-5]] = myfile.read()
+                    with open(os.path.join(path, fileName), 'r') as myfile:
+                        ais[pool + '-' + fileName[:-5]] = myfile.read()
 
-            if (ais.get('AI') is None):
-                raise ValueError('Can\'t find "ai/AI.leek" file')
+            if (ais.get(pool + '-AI') is None):
+                raise ValueError('Can\'t find "{0}/AI.leek" file'.format(path))
 
-            for farmer in Farmers.get():
+            for leek in Pool.get(pool):
                 try:
-                    fais = farmer.getAis()
-                    leek = farmer.getLeek(farmer.getFirstLeekId())
+                    fais = leek.farmer.getAis()
                     for ai in ais:
-                        aid = None
-                        for current in fais:
-                            if current['name'] == ai:
-                                aid = current['id']
-                                break
+                        try:
+                            aid = None
+                            for current in fais:
+                                if current['name'] == ai:
+                                    aid = current['id']
+                                    break
 
-                        if aid is None:
-                            print('New ai "{0}" for {1}'.format(
-                                ai, farmer.name))
-                            aid = farmer.newAi(0, ai)['id']
-                        farmer.saveAi(aid, ais[ai])
-                        if ai == 'AI':
-                            leek.setAi(aid)
+                            if aid is None:
+                                print('New ai "{0}" for {1}'.format(
+                                    ai, leek.farmer.name))
+                                aid = leek.farmer.newAi(0, ai)['id']
+
+                            leek.farmer.saveAi(aid, ais[ai])
+                            if ai == pool + '-AI':
+                                leek.setAi(aid)
+                        except ValueError as err:
+                            print(format(err))
                     leek.raiseError('OK')  #Ugly
                 except ValueError as err:
                     print(format(err))
         except ValueError as err:
             print(format(err))
 
-    def tournament(options):
-        print('Deprecated: use "pool tournament"')
-        for farmer in Farmers.get():
-            try:
-                leek = farmer.getLeek(farmer.getFirstLeekId())
-                leek.tournament()
-                leek.raiseError('OK')  #Ugly
-            except ValueError as err:
-                print(format(err))
+    def tournament(params, options):
+        try:
+            for leek in Pool.get(Pool.parse(options)):
+                try:
+                    leek.tournament()
+                    leek.raiseError('OK')  #Ugly
+                except ValueError as err:
+                    print(format(err))
+        except ValueError as err:
+            print(format(err))
 
-    def equipWeapon(options):
-        print('Deprecated: use "pool equip weapon"')
-        template = options[0]
-        for farmer in Farmers.get():
-            try:
-                wid = None
-                for weapon in farmer.weapons:
-                    if (weapon['template'] == template):
-                        wid = weapon['id']
+    def equipWeapon(params, options):
+        try:
+            template = params[0]
+            for leek in Pool.get(Pool.parse(options)):
+                try:
+                    wid = None
+                    for weapon in leek.farmer.weapons:
+                        if (weapon['template'] == template):
+                            wid = weapon['id']
 
-                if wid is None:
-                    farmer.raiseError(
-                        'Have any {0} available'.format(template))
+                    if wid is None:
+                        leek.farmer.raiseError(
+                            'Have any {0} available'.format(template))
 
-                leek = farmer.getLeek(farmer.getFirstLeekId())
-                leek.equipWeapon(wid)
-                leek.raiseError('OK')  #Ugly
-            except ValueError as err:
-                print(format(err))
+                    leek.equipWeapon(wid)
+                    leek.raiseError('OK')  #Ugly
+                except ValueError as err:
+                    print(format(err))
+        except ValueError as err:
+            print(format(err))
 
-    def unequipWeapon(options):
-        print('Deprecated: use "pool unequip weapon"')
-        template = options[0]
-        for farmer in Farmers.get():
-            try:
-                wid = None
-                leek = farmer.getLeek(farmer.getFirstLeekId())
-                for weapon in leek.weapons:
-                    if (weapon['template'] == template):
-                        wid = weapon['id']
+    def unequipWeapon(params, options):
+        try:
+            template = params[0]
+            for leek in Pool.get(Pool.parse(options)):
+                try:
+                    wid = None
+                    for weapon in leek.weapons:
+                        if (weapon['template'] == template):
+                            wid = weapon['id']
 
-                if wid is None:
-                    farmer.raiseError(
-                        'Have any {0} available'.format(template))
+                    if wid is None:
+                        leek.farmer.raiseError(
+                            'Have any {0} available'.format(template))
 
-                leek.unequipWeapon(wid)
-                leek.raiseError('OK')  #Ugly
-            except ValueError as err:
-                print(format(err))
+                    leek.unequipWeapon(wid)
+                    leek.raiseError('OK')  #Ugly
+                except ValueError as err:
+                    print(format(err))
+        except ValueError as err:
+            print(format(err))
 
-    def equipChip(options):
-        print('Deprecated: use "pool equip chip"')
-        template = options[0]
-        for farmer in Farmers.get():
-            try:
-                wid = None
-                for chip in farmer.chips:
-                    if (chip['template'] == template):
-                        wid = chip['id']
+    def equipChip(params, options):
+        try:
+            template = params[0]
+            for leek in Pool.get(Pool.parse(options)):
+                try:
+                    wid = None
+                    for chip in leek.farmer.chips:
+                        if (chip['template'] == template):
+                            wid = chip['id']
 
-                if wid is None:
-                    farmer.raiseError(
-                        'Have any {0} available'.format(template))
+                    if wid is None:
+                        leek.farmer.raiseError(
+                            'Have any {0} available'.format(template))
 
-                leek = farmer.getLeek(farmer.getFirstLeekId())
-                leek.equipChip(wid)
-                leek.raiseError('OK')  #Ugly
-            except ValueError as err:
-                print(format(err))
+                    leek.equipChip(wid)
+                    leek.raiseError('OK')  #Ugly
+                except ValueError as err:
+                    print(format(err))
+        except ValueError as err:
+            print(format(err))
 
-    def unequipChip(options):
-        print('Deprecated: use "pool unequip chip"')
-        template = options[0]
-        for farmer in Farmers.get():
-            try:
-                wid = None
-                leek = farmer.getLeek(farmer.getFirstLeekId())
-                for chip in leek.chips:
-                    if (chip['template'] == template):
-                        wid = chip['id']
+    def unequipChip(params, options):
+        try:
+            template = params[0]
+            for leek in Pool.get(Pool.parse(options)):
+                try:
+                    wid = None
+                    for chip in leek.chips:
+                        if (chip['template'] == template):
+                            wid = chip['id']
 
-                if wid is None:
-                    farmer.raiseError(
-                        'Have any {0} available'.format(template))
+                    if wid is None:
+                        leek.farmer.raiseError(
+                            'Have any {0} available'.format(template))
 
-                leek.unequipChip(wid)
-                leek.raiseError('OK')  #Ugly
-            except ValueError as err:
-                print(format(err))
+                    leek.unequipChip(wid)
+                    leek.raiseError('OK')  #Ugly
+                except ValueError as err:
+                    print(format(err))
+        except ValueError as err:
+            print(format(err))
 
-    def characteristics(options):
-        print('Deprecated: use "pool characteristics"')
+    def buy(params, options):
+        item = params[0]
+        try:
+            for leek in Pool.get(Pool.parse(options)):
+                try:
+                    for x in (leek.farmer.chips + leek.farmer.weapons):
+                        if x['template'] == item:
+                            leek.farmer.raiseError('Allready have one')
+
+                    leek.farmer.buy(item)
+                    leek.farmer.raiseError('OK')  #Ugly
+                except ValueError as err:
+                    print(format(err))
+        except ValueError as err:
+            print(format(err))
+
+    def sell(params, options):
+        item = params[0]
+        try:
+            for leek in Pool.get(Pool.parse(options)):
+                try:
+                    leek.farmer.sell(item)
+                    leek.farmer.raiseError('OK')  #Ugly
+                except ValueError as err:
+                    print(format(err))
+        except ValueError as err:
+            print(format(err))
+
+    def characteristics(params, options):
         bonuses = {
             'life': 0,
             'strength': 0,
@@ -374,14 +482,120 @@ class FirstLeeks:
             'tp': 0,
             'mp': 0
         }
-        bonuses[options[1]] = options[0]
-        for farmer in Farmers.get():
-            try:
-                leek = farmer.getLeek(farmer.getFirstLeekId())
-                leek.characteristics(bonuses)
-                leek.raiseError('OK')  #Ugly
-            except ValueError as err:
-                print(format(err))
+        bonuses[params[1]] = params[0]
+        try:
+            for leek in Pool.get(Pool.parse(options)):
+                try:
+                    leek.characteristics(bonuses)
+                    leek.raiseError('OK')  #Ugly
+                except ValueError as err:
+                    print(format(err))
+        except ValueError as err:
+            print(format(err))
+
+    def teamJoin(params, options):
+        team = params[0]
+        try:
+            owner = Farmers.farmer(Team.getOwner(team))
+            owner.openTeam('true')
+            for leek in Pool.get(Pool.parse(options)):
+                try:
+                    leek.farmer.joinTeam(team)
+                    for candidacy in owner.getTeam(team)['candidacies']:
+                        if candidacy['farmer']['id'] == leek.farmer.id:
+                            owner.acceptTeamCandidacy(candidacy['id'])
+                            leek.raiseError('OK')  #Ugly
+                    leek.raiseError('Can\'t find candidacy')  #Ugly
+                except ValueError as err:
+                    print(format(err))
+            owner.openTeam('false')
+        except ValueError as err:
+            print(format(err))
+
+    def teamComposition(params, options):
+        try:
+            leeks = Pool.get(Pool.parse(options))
+            team = leeks[0].farmer.data['team']['id']
+            owner = Farmers.farmer(Team.getOwner(team))
+            composition = owner.createTeamComposition(params[0])['id']
+            for leek in leeks:
+                try:
+                    owner.setTeamComposition(composition, leek.id)
+                    leek.raiseError('OK')  #Ugly
+                except ValueError as err:
+                    print(format(err))
+            for compo in owner.getTeam(team)['compositions']:
+                if len(compo['leeks']) == 0:
+                    owner.removeTeamComposition(compo['id'])
+        except ValueError as err:
+            print(format(err))
+
+    def teamTournament(params, options):
+        try:
+            leek = Pool.get(Pool.parse(options))[0]
+            team = leek.farmer.data['team']['id']
+            owner = Farmers.farmer(Team.getOwner(team))
+            for composition in owner.getTeam(team)['compositions']:
+                cleeks = [x['id'] for x in composition['leeks']]
+                if leek.id in cleeks:
+                    owner.tournamentTeamComposition(composition['id'])
+                    leek.raiseError('OK') #Ugly
+            leek.raiseError('Can\'t find composition')
+        except ValueError as err:
+            print(format(err))
+
+    def teamFight(params, options):
+        try:
+            random.seed()
+            leek = Pool.get(Pool.parse(options))[0]
+            team = leek.farmer.data['team']['id']
+            #owner = Farmers.farmer(Team.getOwner(team))
+            for composition in leek.farmer.getTeam(team)['compositions']:
+                cleeks = [x['id'] for x in composition['leeks']]
+                if leek.id in cleeks:
+                    cid = composition['id']
+                    for _ in range(params[0]
+                                   if type(params[0]) is int else 20):
+                        opponents = leek.getCompositionOpponents(cid)
+                        if len(opponents) < 1:
+                            leek.raiseError('Probably, no more team fights')
+                        print('https://leekwars.com/fight/{0}'.format(
+                            leek.teamFight(cid, random.choice(opponents)['id'])))
+                    leek.raiseError('OK')  #Ugly
+            leek.raiseError('Can\'t find composition')
+        except ValueError as err:
+            print(format(err))
+
+    def auto(params, options):
+        Pool.fight([None, None], options)
+        Pool.fight([None, 'force'], options)
+        Pool.teamFight([None], options)
+        Pool.tournament([], options)
+        Pool.teamTournament([], options)
+
+
+class Team:
+    def create(params, options):
+        name = params[0]
+        try:
+            farmer = Farmers.farmer(params[1])
+            farmer.createTeam(name)
+            farmer.raiseError('OK')  #Ugly
+        except ValueError as err:
+            print(format(err))
+
+    def get(team):
+        req = lwapi.team.get(team)
+        if not req.get('success', False):
+            raise ValueError('Team {0} : {1}'.format(team,
+                                                     req.get('error', 'Fail')))
+        return req['team']
+
+    def getOwner(team):
+        for member in Team.get(team)['members']:
+            if member['grade'] == 'owner':
+                return str(member['id'])
+        raise ValueError('Team {0} : Can\'t find owner'.format(team))
 
 
 class Farmer:
@@ -412,8 +626,7 @@ class Farmer:
 
     def getLeek(self, leek):
         return Leek(
-            self.checkRequest(lwapi.leek.get_private(leek, self.token)),
-            self.token)
+            self.checkRequest(lwapi.leek.get_private(leek, self.token)), self)
 
     def getOpponents(self):
         return self.checkRequest(
@@ -428,7 +641,40 @@ class Farmer:
         return ai
 
     def saveAi(self, ai, script):
-        self.checkRequest(lwapi.ai.save(ai, script, self.token))
+        ai = self.checkRequest(lwapi.ai.save(ai, script, self.token))['result']
+        if len(ai[0]) > 3:
+            self.raiseError('Script error')
+
+    def joinTeam(self, team):
+        self.checkRequest(lwapi.team.send_candidacy(team, self.token))
+
+    def openTeam(self, open):
+        self.checkRequest(lwapi.team.set_opened(open, self.token))
+
+    def createTeam(self, name):
+        self.checkRequest(lwapi.team.create(name, self.token))
+        self.openTeam('false')
+
+    def getTeam(self, team):
+        return self.checkRequest(lwapi.team.get_private(team,
+                                                        self.token))['team']
+
+    def acceptTeamCandidacy(self, candidacy):
+        self.checkRequest(lwapi.team.accept_candidacy(candidacy, self.token))
+
+    def createTeamComposition(self, composition):
+        return self.checkRequest(
+            lwapi.team.create_composition(composition, self.token))
+
+    def setTeamComposition(self, composition, leek):
+        self.checkRequest(lwapi.team.move_leek(leek, composition, self.token))
+
+    def removeTeamComposition(self, composition):
+        self.checkRequest(
+            lwapi.team.delete_composition(composition, self.token))
+
+    def tournamentTeamComposition(self, composition):
+        self.checkRequest(lwapi.team.register_tournament(composition, self.token))
 
     def getFirstLeekId(self):
         #NOTE: Deprecated
@@ -436,9 +682,9 @@ class Farmer:
 
 
 class Leek:
-    def __init__(self, data, token):
+    def __init__(self, data, farmer):
         self.data = data['leek']
-        self.token = token
+        self.farmer = farmer
 
         self.id = self.data['id']
         self.name = self.data['name']
@@ -455,52 +701,82 @@ class Leek:
 
     def getOpponents(self):
         return self.checkRequest(
-            lwapi.garden.get_leek_opponents(self.id, self.token))['opponents']
+            lwapi.garden.get_leek_opponents(self.id,
+                                            self.farmer.token))['opponents']
 
     def fight(self, target):
         return self.checkRequest(
             lwapi.garden.start_solo_fight(self.id, target,
-                                          self.token))['fight']
+                                          self.farmer.token))['fight']
 
     def setAi(self, ai):
-        self.checkRequest(lwapi.leek.set_ai(self.id, ai, self.token))
+        self.checkRequest(lwapi.leek.set_ai(self.id, ai, self.farmer.token))
 
     def tournament(self):
-        self.checkRequest(lwapi.leek.register_tournament(self.id, self.token))
+        self.checkRequest(
+            lwapi.leek.register_tournament(self.id, self.farmer.token))
 
     def equipWeapon(self, wid):
-        self.checkRequest(lwapi.leek.add_weapon(self.id, wid, self.token))
+        self.checkRequest(
+            lwapi.leek.add_weapon(self.id, wid, self.farmer.token))
 
     def unequipWeapon(self, wid):
-        self.checkRequest(lwapi.leek.remove_weapon(wid, self.token))
+        self.checkRequest(lwapi.leek.remove_weapon(wid, self.farmer.token))
 
     def equipChip(self, wid):
-        self.checkRequest(lwapi.leek.add_chip(self.id, wid, self.token))
+        self.checkRequest(lwapi.leek.add_chip(self.id, wid, self.farmer.token))
 
     def unequipChip(self, wid):
-        self.checkRequest(lwapi.leek.remove_chip(wid, self.token))
+        self.checkRequest(lwapi.leek.remove_chip(wid, self.farmer.token))
 
     def characteristics(self, bonuses):
         self.checkRequest(
-            lwapi.leek.spend_capital(self.id, json.dumps(bonuses), self.token))
+            lwapi.leek.spend_capital(self.id, json.dumps(bonuses),
+                                     self.farmer.token))
+
+    def getCompositionOpponents(self, composition):
+        return self.checkRequest(
+            lwapi.garden.get_composition_opponents(
+                composition, self.farmer.token))['opponents']
+
+    def teamFight(self, composition, target):
+        return self.checkRequest(
+            lwapi.garden.start_team_fight(composition, target,
+                                          self.farmer.token))['fight']
+
 
 # Main Program
 if __name__ == "__main__":
-    print("TODO pools, teams and so more")
+    #TODO find best opponant
     CommandTree()\
+    .addOption('pool', ['p', '-pool'], {'name': 'pool', 'optional': True, 'default': 'main'})\
     .addCommand('farmers list', 'list all farmers', Farmers.list, [{'name': 'mode', 'optional': True, 'list': [None, 'infos', 'ais', 'stuff', 'leeks']}])\
     .addCommand('farmers stats', 'stats of all farmers', Farmers.stats, [{'name': 'mode', 'list': ['infos']}])\
     .addCommand('farmer register', 'add a new farmer',Farmers.register, [{'name': 'login'},{'name': 'password'}])\
-    .addCommand('farmers buy', 'buy an item',Farmers.buy, [{'name': 'item', 'type': int}])\
-    .addCommand('farmers sell', 'sell an item',Farmers.sell, [{'name': 'item', 'type': int}])\
-    .addCommand('firsts fight', 'Deprecated: run solo fights for first leek of each farmer', FirstLeeks.fight, [{'name': 'count', 'optional': True, 'type': int, 'min': 1, 'max': 100}, {'name': 'force', 'optional': True, 'list': [None, 'force']}])\
-    .addCommand('firsts list', 'Deprecated: list first leek of each farmer', FirstLeeks.list, [{'name': 'mode', 'optional': True, 'list': [None, 'infos', 'stuff', 'characteristics']}])\
-    .addCommand('firsts stats', 'Deprecated: stats of first leek of each farmer', FirstLeeks.stats, [{'name': 'mode', 'list': ['infos', 'characteristics']}])\
-    .addCommand('firsts ais', 'Deprecated: import ai/<name>.leek files and load ai/AI.leek for first leek of each farmer', FirstLeeks.setupAI, [])\
-    .addCommand('firsts tournament', 'Deprecated: register first leek of each farmer for solo tournament', FirstLeeks.tournament, [])\
-    .addCommand('firsts equip weapon', 'Deprecated: equip a weapon for first leek of each farmer', FirstLeeks.equipWeapon, [{'name': 'item', 'type': int}])\
-    .addCommand('firsts unequip weapon', 'Deprecated: unequip a weapon for first leek of each farmer', FirstLeeks.unequipWeapon, [{'name': 'item', 'type': int}])\
-    .addCommand('firsts equip chip', 'Deprecated: equip a chip for first leek of each farmer', FirstLeeks.equipChip, [{'name': 'item', 'type': int}])\
-    .addCommand('firsts unequip chip', 'Deprecated: unequip a chip for first leek of each farmer', FirstLeeks.unequipChip, [{'name': 'item', 'type': int}])\
-    .addCommand('firsts characteristics', 'Deprecated: buy characteristics for first leek of each farmer', FirstLeeks.characteristics, [{'name': 'count', 'type': int}, {'name': 'type', 'list': ['life', 'strength', 'wisdom', 'agility', 'resistance', 'science', 'magic', 'tp', 'mp', 'frequency']}])\
+    .addCommand('farmers buy', 'buy an item FOREACH farmers',Farmers.buy, [{'name': 'item', 'type': int}])\
+    .addCommand('farmers sell', 'sell an item FOREACH farmers',Farmers.sell, [{'name': 'item', 'type': int}])\
+    .addCommand('pools list', 'list all pools',Pools.list, [])\
+    .addCommand('pool create', 'create a new pool',Pool.create, [])\
+    .addCommand('pool register', 'add a leek to a pool',Pool.register, [{'name': 'leek'}])\
+    .addCommand('pool list', 'list leeks',Pool.list, [{'name': 'mode', 'optional': True, 'list': [None, 'infos', 'stuff', 'characteristics']}])\
+    .addCommand('pool stats', 'stats of pool\'s leeks', Pool.stats, [{'name': 'mode', 'list': ['infos', 'characteristics', 'farmers']}])\
+    .addCommand('pool fight', 'run solo fights', Pool.fight, [{'name': 'count', 'optional': True, 'type': int, 'min': 1, 'max': 100}, {'name': 'force', 'optional': True, 'list': [None, 'force']}])\
+    .addCommand('pool ais', 'import ai/<pool>/<name>.leek files and load ai/<pool>/AI.leek', Pool.setupAI, [])\
+    .addCommand('pool tournament', 'register for solo tournament', Pool.tournament, [])\
+    .addCommand('pool equip weapon', 'equip a weapon', Pool.equipWeapon, [{'name': 'item', 'type': int}])\
+    .addCommand('pool unequip weapon', 'unequip a weapon', Pool.unequipWeapon, [{'name': 'item', 'type': int}])\
+    .addCommand('pool equip chip', 'equip a chip', Pool.equipChip, [{'name': 'item', 'type': int}])\
+    .addCommand('pool unequip chip', 'unequip a chip', Pool.unequipChip, [{'name': 'item', 'type': int}])\
+    .addCommand('pool characteristics', 'buy characteristics', Pool.characteristics, [{'name': 'count', 'type': int}, {'name': 'type', 'list': ['life', 'strength', 'wisdom', 'agility', 'resistance', 'science', 'magic', 'tp', 'mp', 'frequency']}])\
+    .addCommand('pool buy', 'buy an item',Pool.buy, [{'name': 'item', 'type': int}])\
+    .addCommand('pool sell', 'sell an item',Pool.sell, [{'name': 'item', 'type': int}])\
+    .addCommand('pool team join', 'join a team', Pool.teamJoin, [{'name': 'team', 'type': int}])\
+    .addCommand('pool team composition', 'create a composition. must be ownered by a register farmer', Pool.teamComposition, [{'name': 'composition'}])\
+    .addCommand('pool team tournament', 'register composition for team tournament. based on first farmer team', Pool.teamTournament, [])\
+    .addCommand('pool team fight', 'run team fights', Pool.teamFight, [{'name': 'count', 'optional': True, 'type': int, 'min': 1, 'max': 20}])\
+    .addCommand('pool auto', 'run "fight, fight force, team fight, tournament, team tournament"', Pool.auto, [])\
+    .addCommand('team create', 'create a team', Team.create, [{'name': 'name'}, {'name': 'owner'}])\
     .parse(sys.argv)
+    '''
+    .addOption('farmer', ['f', '-farmer'], {'name': 'farmer', 'optional': True})\
+    '''
