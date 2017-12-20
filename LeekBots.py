@@ -4,6 +4,7 @@
 
 import sys
 import random
+import time
 import os.path
 import json
 import APILeekwars as API
@@ -298,6 +299,7 @@ class Pool:
 
                         print('https://leekwars.com/fight/{0}'.format(
                             leek.fight(random.choice(opponents))))
+                        time.sleep(options['sleep'])
                 except ValueError as err:
                     print(format(err))
         except ValueError as err:
@@ -561,6 +563,7 @@ class Pool:
                             leek.raiseError('Probably, no more team fights')
                         print('https://leekwars.com/fight/{0}'.format(
                             leek.teamFight(cid, random.choice(opponents)['id'])))
+                        time.sleep(options['sleep'])
                     leek.raiseError('OK')  #Ugly
             leek.raiseError('Can\'t find composition')
         except ValueError as err:
@@ -569,6 +572,7 @@ class Pool:
     def auto(params, options):
         Pool.fight([None, None], options)
         Pool.fight([None, 'force'], options)
+        time.sleep(options['sleep']*10)
         Pool.teamFight([None], options)
         Pool.tournament([], options)
         Pool.teamTournament([], options)
@@ -750,6 +754,7 @@ if __name__ == "__main__":
     #TODO find best opponant
     CommandTree()\
     .addOption('pool', ['p', '-pool'], {'name': 'pool', 'optional': True, 'default': 'main'})\
+    .addOption('sleep', ['s', '-sleep'], {'name': 'sleep time', 'optional': True, 'type': int, 'min': 0, 'default': 1})\
     .addCommand('farmers list', 'list all farmers', Farmers.list, [{'name': 'mode', 'optional': True, 'list': [None, 'infos', 'ais', 'stuff', 'leeks']}])\
     .addCommand('farmers stats', 'stats of all farmers', Farmers.stats, [{'name': 'mode', 'list': ['infos']}])\
     .addCommand('farmer register', 'add a new farmer',Farmers.register, [{'name': 'login'},{'name': 'password'}])\
