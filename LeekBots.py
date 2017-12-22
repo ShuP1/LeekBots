@@ -218,7 +218,7 @@ class Pool:
 
     def list(params, options):
         try:
-            for leek in Pool.get(Pool.parse(options)):
+            for leek in Pool.get(Settings(options), Pool.parse(options)):
                 print(leek.name)
                 if len(params) == 1:
                     mode = params[0]
