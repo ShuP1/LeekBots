@@ -810,5 +810,5 @@ if __name__ == "__main__":
     .addCommand('pool auto', 'run "fight, fight force, team fight, tournament, team tournament"', Pool.auto, [])\
     .addCommand('team create', 'create a team', Team.create, [{'name': 'name'}, {'name': 'owner'}])\
     .parse(sys.argv)
-
+    
     #.addOption('farmer', ['f', '-farmer'], {'name': 'farmer', 'optional': True})\
