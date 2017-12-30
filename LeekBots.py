@@ -82,6 +82,13 @@ class Farmers:
             raise ValueError('Can\'t find Farmer "{0}"'.format(id))
         return Farmers.login(login['login'], login['password'])
 
+    def farmerIn(settings, ids):
+        for id in ids:
+            login = settings.getFarmers().get(id)
+            if not login is None:
+                return Farmers.login(login['login'], login['password'])
+        raise ValueError('Can\'t find any farmer')
+
     def get(settings):
         farmers = []
         logins = settings.getFarmers()
@@ -218,7 +225,7 @@ class Pool:
 
     def list(params, options):
         try:
-            for leek in Pool.get(Pool.parse(options)):
+            for leek in Pool.get(Settings(options), Pool.parse(options)):
                 print(leek.name)
                 if len(params) == 1:
                     mode = params[0]
@@ -526,7 +533,7 @@ class Pool:
         try:
             leeks = Pool.get(Settings(options), Pool.parse(options))
             team = leeks[0].farmer.data['team']['id']
-            owner = Farmers.farmer(Settings(options), Team.getOwner(team))
+            owner = Farmers.farmerIn(Settings(options), Team.getCaptains(team))
             composition = owner.createTeamComposition(params[0])['id']
             for leek in leeks:
                 try:
@@ -544,7 +551,7 @@ class Pool:
         try:
             leek = Pool.get(Settings(options), Pool.parse(options))[0]
             team = leek.farmer.data['team']['id']
-            owner = Farmers.farmer(Settings(options), Team.getOwner(team))
+            owner = Farmers.farmerIn(Settings(options), Team.getCaptains(team))
             for composition in owner.getTeam(team)['compositions']:
                 cleeks = [x['id'] for x in composition['leeks']]
                 if leek.id in cleeks:
@@ -614,6 +621,13 @@ class Team:
             if member['grade'] == 'owner':
                 return str(member['id'])
         raise ValueError('Team {0} : Can\'t find owner'.format(team))
+
+    def getCaptains(team):
+        captains = []
+        for member in Team.get(team)['members']:
+            if member['grade'] in ['owner', 'captain']:
+                captains.append(str(member['id']))
+        return captains
 
 
 class Farmer:
@@ -765,7 +779,6 @@ class Leek:
 
 # Main Program
 if __name__ == "__main__":
-    #TODO find best opponant
     CommandTree()\
     .addOption('pool', ['p', '-pool'], {'name': 'pool', 'optional': True, 'default': 'main'})\
     .addOption('sleep', ['s', '-sleep'], {'name': 'sleep time', 'optional': True, 'type': int, 'min': 0, 'default': 1})\
@@ -790,12 +803,12 @@ if __name__ == "__main__":
     .addCommand('pool characteristics', 'buy characteristics', Pool.characteristics, [{'name': 'count', 'type': int}, {'name': 'type', 'list': ['life', 'strength', 'wisdom', 'agility', 'resistance', 'science', 'magic', 'tp', 'mp', 'frequency']}])\
     .addCommand('pool buy', 'buy an item',Pool.buy, [{'name': 'item', 'type': int}])\
     .addCommand('pool sell', 'sell an item',Pool.sell, [{'name': 'item', 'type': int}])\
-    .addCommand('pool team join', 'join a team', Pool.teamJoin, [{'name': 'team', 'type': int}])\
-    .addCommand('pool team composition', 'create a composition. must be ownered by a register farmer', Pool.teamComposition, [{'name': 'composition'}])\
+    .addCommand('pool team join', 'join a team. owner must be register', Pool.teamJoin, [{'name': 'team', 'type': int}])\
+    .addCommand('pool team composition', 'create a composition. a captain must be register', Pool.teamComposition, [{'name': 'composition'}])\
     .addCommand('pool team tournament', 'register composition for team tournament. based on first farmer team', Pool.teamTournament, [])\
     .addCommand('pool team fight', 'run team fights', Pool.teamFight, [{'name': 'count', 'optional': True, 'type': int, 'min': 1, 'max': 20}])\
     .addCommand('pool auto', 'run "fight, fight force, team fight, tournament, team tournament"', Pool.auto, [])\
     .addCommand('team create', 'create a team', Team.create, [{'name': 'name'}, {'name': 'owner'}])\
     .parse(sys.argv)
-    
+
     #.addOption('farmer', ['f', '-farmer'], {'name': 'farmer', 'optional': True})\
