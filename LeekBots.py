@@ -299,14 +299,23 @@ class Pool:
                         if len(opponents) < 1:
                             leek.raiseError('Probably, no more fights')
 
-                        opid = None
-                        opscore = 20000000
-                        for x in opponents:
-                            if force or not x['id'] in leeksids:
-                                score = x['level'] * x['talent']
-                                if score < opscore:
-                                    opid = x['id']
-                                    opscore = score
+                        if options['selection-mode'] == 'random':
+                            opid = random.choice([
+                                x['id'] for x in opponents
+                                if force or not x['id'] in leeksids
+                            ])
+                        else:
+                            opid = None
+                            if options['selection-mode'] == 'worst':
+                                opscore = 20000000
+                            else:
+                                opscore = 0
+                            for x in opponents:
+                                if force or not x['id'] in leeksids:
+                                    score = x['level'] * x['talent']
+                                    if (options['selection-mode'] == 'worst' and score < opscore) or (not options['selection-mode'] == 'worst' and score > opscore):
+                                        opid = x['id']
+                                        opscore = score
 
                         if opid is None:
                             leek.raiseError(
@@ -563,6 +572,7 @@ class Pool:
 
     def teamFight(params, options):
         try:
+            random.seed()
             leek = Pool.get(Settings(options), Pool.parse(options))[0]
             team = leek.farmer.data['team']['id']
             for composition in leek.farmer.getTeam(team)['compositions']:
@@ -575,12 +585,24 @@ class Pool:
                         if len(opponents) < 1:
                             leek.raiseError('Probably, no more team fights')
 
-                        opid = None
-                        optalent = 20000000
-                        for x in opponents:
-                            if x['talent'] < optalent:
-                                opid = x['id']
-                                optalent = x['talent']
+                        if options['selection-mode'] == 'random':
+                            opid = random.choice(opponents)['id']
+                        else:
+                            opid = None
+                            if options['selection-mode'] == 'worst':
+                                optalent = 20000000
+                            else:
+                                optalent = 0
+                            for x in opponents:
+                                if (
+                                    options['selection-mode'] == 'worst'
+                                    and optalent < x['talent']
+                                ) or (
+                                    not options['selection-mode'] == 'worst'
+                                    and optalent > x['talent']
+                                ):
+                                    opid = x['id']
+                                    optalent = x['talent']
 
                         print('https://leekwars.com/fight/{0}'.format(
                             leek.teamFight(cid, opid)))
@@ -781,6 +803,7 @@ class Leek:
 if __name__ == "__main__":
     CommandTree()\
     .addOption('pool', ['p', '-pool'], {'name': 'pool', 'optional': True, 'default': 'main'})\
+    .addOption('selection-mode', ['sm', '-selection-mode'], {'name': 'selection mode', 'optional': True, 'list': ['random', 'best', 'worst'], 'default': 'worst'})\
     .addOption('sleep', ['s', '-sleep'], {'name': 'sleep time', 'optional': True, 'type': int, 'min': 0, 'default': 1})\
     .addOption('path', ['-path'], {'name': 'config path', 'optional': True, 'default': '*/LeekBots.json'})\
     .addCommand('farmers list', 'list all farmers', Farmers.list, [{'name': 'mode', 'optional': True, 'list': [None, 'infos', 'ais', 'stuff', 'leeks']}])\
@@ -810,5 +833,5 @@ if __name__ == "__main__":
     .addCommand('pool auto', 'run "fight, fight force, team fight, tournament, team tournament"', Pool.auto, [])\
     .addCommand('team create', 'create a team', Team.create, [{'name': 'name'}, {'name': 'owner'}])\
     .parse(sys.argv)
-    
+
     #.addOption('farmer', ['f', '-farmer'], {'name': 'farmer', 'optional': True})\
