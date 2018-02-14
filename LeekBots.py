@@ -300,10 +300,15 @@ class Pool:
                             leek.raiseError('Probably, no more fights')
 
                         if options['selection-mode'] == 'random':
-                            opid = random.choice([
+                            oplist = [
                                 x['id'] for x in opponents
                                 if force or not x['id'] in leeksids
-                            ])
+                            ]
+
+                            if len(oplist) < 1:
+                                leek.raiseError(
+                                    'Really? All your opponnents are allies')
+                            opid = random.choice(oplist)
                         else:
                             opid = None
                             if options['selection-mode'] == 'worst':
@@ -316,10 +321,9 @@ class Pool:
                                     if (options['selection-mode'] == 'worst' and score < opscore) or (not options['selection-mode'] == 'worst' and score > opscore):
                                         opid = x['id']
                                         opscore = score
-
-                        if opid is None:
-                            leek.raiseError(
-                                'Really? All your opponnents are allies')
+                            if opid is None:
+                                leek.raiseError(
+                                    'Really? All your opponnents are allies')
 
                         print('https://leekwars.com/fight/{0}'.format(
                             leek.fight(opid)))
