@@ -89,6 +89,13 @@ class Farmers:
                 return Farmers.login(login['login'], login['password'])
         raise ValueError('Can\'t find any farmer')
 
+    def parse(options):
+        farmer = options.get('farmer')
+        if farmer is None:
+            raise ValueError('Any farmer option (use -f <id>)')
+        print('Using "{0}" farmer'.format(farmer))
+        return farmer
+
     def get(settings):
         farmers = []
         logins = settings.getFarmers()
@@ -171,6 +178,48 @@ class Farmers:
                 farmer.raiseError('OK')  #Ugly
             except ValueError as err:
                 print(format(err))
+
+    def tournament(params, options):
+        try:
+            farmer = Farmers.farmer(Settings(options), Farmers.parse(options))
+            farmer.tournament()
+            farmer.raiseError('OK')  #Ugly
+        except ValueError as err:
+            print(format(err))
+
+    def fight(params, options):
+        try:
+            random.seed()
+            farmer = Farmers.farmer(Settings(options), Farmers.parse(options))
+            for _ in range(params[0]
+                            if type(params[0]) is int else 20):
+                opponents = farmer.getOpponents()
+                if len(opponents) < 1:
+                    leek.raiseError('Probably, no more farmer fights')
+
+                #if options['selection-mode'] == 'random':
+                opid = random.choice(opponents)['id']
+                #else:
+                #    opid = None
+                #    if options['selection-mode'] == 'worst':
+                #        optalent = 20000000
+                #    else:
+                #        optalent = 0
+                #    for x in opponents:
+                #        if (
+                #                options['selection-mode'] == 'worst'
+                #                and optalent < x['talent']
+                #        ) or (not options['selection-mode'] == 'worst'
+                #                and optalent > x['talent']):
+                #            opid = x['id']
+                #            optalent = x['talent']
+
+                print('https://leekwars.com/fight/{0}'.format(
+                    farmer.fight(opid)))
+                time.sleep(options['sleep'])
+            farmer.raiseError('OK')  #Ugly
+        except ValueError as err:
+            print(format(err))
 
 
 class Pools:
@@ -624,6 +673,17 @@ class Pool:
         Pool.tournament([], options)
         Pool.teamTournament([], options)
 
+    def farmersTournament(params, options):
+        try:
+            for leek in Pool.get(Settings(options), Pool.parse(options)):
+                try:
+                    leek.farmer.tournament()
+                    leek.farmer.raiseError('OK')  #Ugly
+                except ValueError as err:
+                    print(format(err))
+        except ValueError as err:
+            print(format(err))
+
 
 class Team:
     def create(params, options):
@@ -734,6 +794,12 @@ class Farmer:
     def tournamentTeamComposition(self, composition):
         self.checkRequest(lwapi.team.register_tournament(composition, self.token))
 
+    def tournament(self):
+        self.checkRequest(lwapi.farmer.register_tournament(self.token))
+
+    def fight(self, target):
+        return self.checkRequest(lwapi.garden.start_farmer_fight(target, self.token))
+
     def getFirstLeekId(self):
         #NOTE: Deprecated
         return next(iter(self.leeks))
@@ -807,14 +873,17 @@ class Leek:
 if __name__ == "__main__":
     CommandTree()\
     .addOption('pool', ['p', '-pool'], {'name': 'pool', 'optional': True, 'default': 'main'})\
+    .addOption('farmer', ['f', '-farmer'], {'name': 'farmer (id)', 'optional': True})\
     .addOption('selection-mode', ['sm', '-selection-mode'], {'name': 'selection mode', 'optional': True, 'list': ['random', 'best', 'worst'], 'default': 'worst'})\
     .addOption('sleep', ['s', '-sleep'], {'name': 'sleep time', 'optional': True, 'type': int, 'min': 0, 'default': 1})\
     .addOption('path', ['-path'], {'name': 'config path', 'optional': True, 'default': '*/LeekBots.json'})\
     .addCommand('farmers list', 'list all farmers', Farmers.list, [{'name': 'mode', 'optional': True, 'list': [None, 'infos', 'ais', 'stuff', 'leeks']}])\
     .addCommand('farmers stats', 'stats of all farmers', Farmers.stats, [{'name': 'mode', 'list': ['infos']}])\
-    .addCommand('farmer register', 'add a new farmer',Farmers.register, [{'name': 'login'},{'name': 'password'}])\
     .addCommand('farmers buy', 'buy an item FOREACH farmers',Farmers.buy, [{'name': 'item', 'type': int}])\
     .addCommand('farmers sell', 'sell an item FOREACH farmers',Farmers.sell, [{'name': 'item', 'type': int}])\
+    .addCommand('farmer register', 'add a new farmer',Farmers.register, [{'name': 'login'},{'name': 'password'}])\
+    .addCommand('farmer fight', 'run farmer fights', Farmers.fight, [{'name': 'count', 'optional': True, 'type': int, 'min': 1, 'max': 20}])\
+    .addCommand('farmer tournament', 'register farmer to tournament', Farmers.tournament, [])\
     .addCommand('pools list', 'list all pools',Pools.list, [])\
     .addCommand('pool create', 'create a new pool',Pool.create, [])\
     .addCommand('pool register', 'add a leek to a pool',Pool.register, [{'name': 'leek'}])\
@@ -834,8 +903,7 @@ if __name__ == "__main__":
     .addCommand('pool team composition', 'create a composition. a captain must be register', Pool.teamComposition, [{'name': 'composition'}])\
     .addCommand('pool team tournament', 'register composition for team tournament. based on first farmer team', Pool.teamTournament, [])\
     .addCommand('pool team fight', 'run team fights', Pool.teamFight, [{'name': 'count', 'optional': True, 'type': int, 'min': 1, 'max': 20}])\
+    .addCommand('pool farmers tournament', 'register each farmer to tournament', Pool.farmersTournament, [])\
     .addCommand('pool auto', 'run "fight, fight force, team fight, tournament, team tournament"', Pool.auto, [])\
     .addCommand('team create', 'create a team', Team.create, [{'name': 'name'}, {'name': 'owner'}])\
     .parse(sys.argv)
-
-    #.addOption('farmer', ['f', '-farmer'], {'name': 'farmer', 'optional': True})\

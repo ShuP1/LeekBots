@@ -66,8 +66,7 @@ class CommandTree:
                                 str(x) for x in plist)))
                         return False
         else:
-            print('"{0}" only accepts {1} params.'.format(
-                path, len(command['params'])))
+            print('"{0}" doesn\'t accepts so many params.'.format(path))
             return False
         return data
 
