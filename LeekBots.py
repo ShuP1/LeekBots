@@ -519,6 +519,18 @@ class Pool:
                     print(format(err))
         except ValueError as err:
             print(format(err))
+            
+    def usePotion(params, options):
+        try:
+            potion = params[0]
+            for leek in Pool.get(Settings(options), Pool.parse(options)):
+                try:
+                    leek.usePotion(potion)
+                    leek.raiseError('OK')  #Ugly
+                except ValueError as err:
+                    print(format(err))
+        except ValueError as err:
+            print(format(err))
 
     def buy(params, options):
         item = params[0]
@@ -852,6 +864,9 @@ class Leek:
 
     def unequipChip(self, wid):
         self.checkRequest(lwapi.leek.remove_chip(wid, self.farmer.token))
+        
+    def usePotion(self, pid):
+        self.checkRequest(lwapi.leek.use_potion(pid, self.farmer.token))
 
     def characteristics(self, bonuses):
         self.checkRequest(
@@ -896,6 +911,7 @@ if __name__ == "__main__":
     .addCommand('pool unequip weapon', 'unequip a weapon', Pool.unequipWeapon, [{'name': 'item', 'type': int}])\
     .addCommand('pool equip chip', 'equip a chip', Pool.equipChip, [{'name': 'item', 'type': int}])\
     .addCommand('pool unequip chip', 'unequip a chip', Pool.unequipChip, [{'name': 'item', 'type': int}])\
+    .addCommand('pool use potion', 'use a potion', Pool.usePotion, [{'name': 'potion', 'type': int}])\
     .addCommand('pool characteristics', 'buy characteristics', Pool.characteristics, [{'name': 'count', 'type': int}, {'name': 'type', 'list': ['life', 'strength', 'wisdom', 'agility', 'resistance', 'science', 'magic', 'tp', 'mp', 'frequency']}])\
     .addCommand('pool buy', 'buy an item',Pool.buy, [{'name': 'item', 'type': int}])\
     .addCommand('pool sell', 'sell an item',Pool.sell, [{'name': 'item', 'type': int}])\
