@@ -635,6 +635,15 @@ class Pool:
         except ValueError as err:
             print(format(err))
 
+    def teamEmblem(params, options):
+        try:
+            leek = Pool.get(Settings(options), Pool.parse(options))[0]
+            team = leek.farmer.data['team']['id']
+            owner = Farmers.farmerIn(Settings(options), Team.getCaptains(team))
+            owner.teamEmblem(team, open(params[0], 'rb'))
+        except ValueError as err:
+            print(format(err))
+
     def teamFight(params, options):
         try:
             random.seed()
@@ -690,6 +699,17 @@ class Pool:
             for leek in Pool.get(Settings(options), Pool.parse(options)):
                 try:
                     leek.farmer.tournament()
+                    leek.farmer.raiseError('OK')  #Ugly
+                except ValueError as err:
+                    print(format(err))
+        except ValueError as err:
+            print(format(err))
+
+    def farmersAvatar(params, options):
+        try:
+            for leek in Pool.get(Settings(options), Pool.parse(options)):
+                try:
+                    leek.farmer.avatar(open(params[0], 'rb'))
                     leek.farmer.raiseError('OK')  #Ugly
                 except ValueError as err:
                     print(format(err))
@@ -812,6 +832,12 @@ class Farmer:
     def fight(self, target):
         return self.checkRequest(lwapi.garden.start_farmer_fight(target, self.token))
 
+    def avatar(self, avatar):
+        return self.checkRequest(lwapi.farmer.set_avatar(avatar, self.token))
+
+    def teamEmblem(self, team, emblem):
+        return self.checkRequest(lwapi.team.set_emblem(team, emblem, self.token))
+
     def getFirstLeekId(self):
         #NOTE: Deprecated
         return next(iter(self.leeks))
@@ -919,6 +945,8 @@ if __name__ == "__main__":
     .addCommand('pool team composition', 'create a composition. a captain must be register', Pool.teamComposition, [{'name': 'composition'}])\
     .addCommand('pool team tournament', 'register composition for team tournament. based on first farmer team', Pool.teamTournament, [])\
     .addCommand('pool team fight', 'run team fights', Pool.teamFight, [{'name': 'count', 'optional': True, 'type': int, 'min': 1, 'max': 20}])\
+    .addCommand('pool team emblem', 'set emblem', Pool.teamEmblem, [{'name': 'file'}])\
+    .addCommand('pool farmers avatar', 'set avatar for each farmer', Pool.farmersAvatar, [{'name': 'file'}])\
     .addCommand('pool farmers tournament', 'register each farmer to tournament', Pool.farmersTournament, [])\
     .addCommand('pool auto', 'run "fight, fight force, team fight, tournament, team tournament"', Pool.auto, [])\
     .addCommand('team create', 'create a team', Team.create, [{'name': 'name'}, {'name': 'owner'}])\
