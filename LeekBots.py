@@ -522,10 +522,19 @@ class Pool:
             
     def usePotion(params, options):
         try:
-            potion = params[0]
+            template = params[0]
             for leek in Pool.get(Settings(options), Pool.parse(options)):
                 try:
-                    leek.usePotion(potion)
+                    pid = None
+                    for potion in leek.farmer.potions:
+                        if (potion['template'] == template):
+                            pid = potion['id']
+
+                    if pid is None:
+                        leek.farmer.raiseError(
+                            'Have any {0} available'.format(template))
+
+                    leek.usePotion(pid)
                     leek.raiseError('OK')  #Ugly
                 except ValueError as err:
                     print(format(err))
@@ -757,6 +766,7 @@ class Farmer:
         self.name = self.data['name']
         self.weapons = self.data['weapons']
         self.chips = self.data['chips']
+        self.potions = self.data['potions']
         self.leeks = self.data['leeks']
         self.fights = self.data['fights']
 
@@ -892,7 +902,7 @@ class Leek:
         self.checkRequest(lwapi.leek.remove_chip(wid, self.farmer.token))
         
     def usePotion(self, pid):
-        self.checkRequest(lwapi.leek.use_potion(pid, self.farmer.token))
+        self.checkRequest(lwapi.leek.use_potion(self.id, pid, self.farmer.token))
 
     def characteristics(self, bonuses):
         self.checkRequest(
