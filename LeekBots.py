@@ -197,22 +197,24 @@ class Farmers:
                 if len(opponents) < 1:
                     leek.raiseError('Probably, no more farmer fights')
 
-                #if options['selection-mode'] == 'random':
-                opid = random.choice(opponents)['id']
-                #else:
-                #    opid = None
-                #    if options['selection-mode'] == 'worst':
-                #        optalent = 20000000
-                #    else:
-                #        optalent = 0
-                #    for x in opponents:
-                #        if (
-                #                options['selection-mode'] == 'worst'
-                #                and optalent < x['talent']
-                #        ) or (not options['selection-mode'] == 'worst'
-                #                and optalent > x['talent']):
-                #            opid = x['id']
-                #            optalent = x['talent']
+                if options['selection-mode'] == 'random':
+                    opid = random.choice(opponents)['id']
+                else:
+                    opid = None
+                    if options['selection-mode'] == 'worst':
+                        optalent = 20000000
+                    else:
+                        optalent = 0
+                    for x in opponents:
+                        if (
+                            options['selection-mode'] == 'worst'
+                            and optalent > x['talent']
+                        ) or (
+                            not options['selection-mode'] == 'worst'
+                            and optalent < x['talent']
+                        ):
+                            opid = x['id']
+                            optalent = x['talent']
 
                 print('https://leekwars.com/fight/{0}'.format(
                     farmer.fight(opid)))
@@ -367,7 +369,13 @@ class Pool:
                             for x in opponents:
                                 if force or not x['id'] in leeksids:
                                     score = x['level'] * x['talent']
-                                    if (options['selection-mode'] == 'worst' and score < opscore) or (not options['selection-mode'] == 'worst' and score > opscore):
+                                    if (
+                                        options['selection-mode'] == 'worst'
+                                        and score < opscore
+                                    ) or (
+                                        not options['selection-mode'] == 'worst'
+                                        and score > opscore
+                                    ):
                                         opid = x['id']
                                         opscore = score
                             if opid is None:
@@ -645,7 +653,7 @@ class Pool:
                 if leek.id in cleeks:
                     cid = composition['id']
                     for _ in range(params[0]
-                                   if type(params[0]) is int else 20):
+                                    if type(params[0]) is int else 20):
                         opponents = leek.getCompositionOpponents(cid)
                         if len(opponents) < 1:
                             leek.raiseError('Probably, no more team fights')
@@ -661,10 +669,10 @@ class Pool:
                             for x in opponents:
                                 if (
                                     options['selection-mode'] == 'worst'
-                                    and optalent < x['talent']
+                                    and optalent > x['talent']
                                 ) or (
                                     not options['selection-mode'] == 'worst'
-                                    and optalent > x['talent']
+                                    and optalent < x['talent']
                                 ):
                                     opid = x['id']
                                     optalent = x['talent']
