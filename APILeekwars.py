@@ -160,7 +160,7 @@ class APIFarmer:
 
     def set_avatar(self, avatar, token):
         url = self.url + "/set-avatar/"
-        return self.session.post(url, data={"avatar" : avatar, "token" : token}).json()
+        return self.session.post(url, data={"token" : token}, files={'avatar': ('avatar', avatar, 'image/png', {'Expires': '0'})}).json()
 
     def set_github(self, github, token):
         url = self.url + "/set-github/"
@@ -622,7 +622,7 @@ class APITeam:
 
     def set_emblem(self, team_id, emblem, token):
         url = self.url + "/set-emblem/"
-        return self.session.post(url, data={"team_id" : team_id, "emblem" : emblem, "token" : token}).json()
+        return self.session.post(url, data={"team_id" : team_id, "token" : token}, files={'emblem': ('emblem', emblem, 'image/png', {'Expires': '0'})}).json()
 
     def set_opened(self, opened, token):
         url = self.url + "/set-opened/"
