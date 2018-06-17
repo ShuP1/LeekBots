@@ -223,6 +223,15 @@ class Farmers:
         except ValueError as err:
             print(format(err))
 
+    def createLeek(params, options):
+        name = params[0]
+        try:
+            farmer = Farmers.farmer(Settings(options), Farmers.parse(options))
+            farmer.createLeek(name)
+            farmer.raiseError('OK')  #Ugly
+        except ValueError as err:
+            print(format(err))
+
 
 class Pools:
     def list(params, options):
@@ -527,7 +536,7 @@ class Pool:
                     print(format(err))
         except ValueError as err:
             print(format(err))
-            
+
     def usePotion(params, options):
         try:
             template = params[0]
@@ -856,6 +865,9 @@ class Farmer:
     def teamEmblem(self, team, emblem):
         return self.checkRequest(lwapi.team.set_emblem(team, emblem, self.token))
 
+    def createLeek(self, name):
+        return self.checkRequest(lwapi.leek.create(name, self.token))
+
     def getFirstLeekId(self):
         #NOTE: Deprecated
         return next(iter(self.leeks))
@@ -908,7 +920,7 @@ class Leek:
 
     def unequipChip(self, wid):
         self.checkRequest(lwapi.leek.remove_chip(wid, self.farmer.token))
-        
+
     def usePotion(self, pid):
         self.checkRequest(lwapi.leek.use_potion(self.id, pid, self.farmer.token))
 
@@ -943,6 +955,7 @@ if __name__ == "__main__":
     .addCommand('farmer register', 'add a new farmer',Farmers.register, [{'name': 'login'},{'name': 'password'}])\
     .addCommand('farmer fight', 'run farmer fights', Farmers.fight, [{'name': 'count', 'optional': True, 'type': int, 'min': 1, 'max': 20}])\
     .addCommand('farmer tournament', 'register farmer to tournament', Farmers.tournament, [])\
+    .addCommand('farmer create leek', 'create a new leek for farmer', Farmers.createLeek, [{'name': 'name'}])\
     .addCommand('pools list', 'list all pools',Pools.list, [])\
     .addCommand('pool create', 'create a new pool',Pool.create, [])\
     .addCommand('pool register', 'add a leek to a pool',Pool.register, [{'name': 'leek'}])\
