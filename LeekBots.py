@@ -102,10 +102,21 @@ class Items:
 
     def getName(id):
         return Items.getAll().get(id, '?')
+        
+    def keyForValue(items, key):
+        try:
+            return list(items.keys())[list(items.values()).index(key)]
+        except:
+            raise ValueError('Unknown item "{0}"'.format(key))
 
-    def getID(name):
-        items = Items.getAll()
-        return list(items.keys())[list(items.values()).index(name)]
+    def toID(items, key):
+        if key.isdigit():
+            key = int(key)
+            if not key in items:
+                raise ValueError('Unknown item id "{0}"'.format(key))
+            return key
+        else:
+            return Items.keyForValue(items, key)
 
 
 class Farmers:
@@ -523,7 +534,7 @@ class Pool:
 
     def equipWeapon(params, options):
         try:
-            template = params[0]
+            template = Items.toID(Items.getWeapons(), params[0])
             for leek in Pool.get(Settings(options), Pool.parse(options)):
                 try:
                     wid = None
@@ -544,7 +555,7 @@ class Pool:
 
     def unequipWeapon(params, options):
         try:
-            template = params[0]
+            template = Items.toID(Items.getWeapons(), params[0])
             for leek in Pool.get(Settings(options), Pool.parse(options)):
                 try:
                     wid = None
@@ -565,7 +576,7 @@ class Pool:
 
     def equipChip(params, options):
         try:
-            template = params[0]
+            template = Items.toID(Items.getChips(), params[0])
             for leek in Pool.get(Settings(options), Pool.parse(options)):
                 try:
                     wid = None
@@ -586,7 +597,7 @@ class Pool:
 
     def unequipChip(params, options):
         try:
-            template = params[0]
+            template = Items.toID(Items.getChips(), params[0])
             for leek in Pool.get(Settings(options), Pool.parse(options)):
                 try:
                     wid = None
@@ -607,7 +618,7 @@ class Pool:
 
     def usePotion(params, options):
         try:
-            template = params[0]
+            template = Items.toID(Items.getPotions(), params[0])
             for leek in Pool.get(Settings(options), Pool.parse(options)):
                 try:
                     pid = None
@@ -627,8 +638,8 @@ class Pool:
             print(format(err))
 
     def buy(params, options):
-        item = params[0]
         try:
+            item = Items.toID(Items.getAll(), params[0])
             for leek in Pool.get(Settings(options), Pool.parse(options)):
                 try:
                     for x in (leek.farmer.chips + leek.farmer.weapons):
@@ -643,8 +654,8 @@ class Pool:
             print(format(err))
 
     def sell(params, options):
-        item = params[0]
         try:
+            item = Items.toID(Items.getAll(), params[0])
             for leek in Pool.get(Settings(options), Pool.parse(options)):
                 try:
                     leek.farmer.sell(item)
@@ -1033,14 +1044,14 @@ if __name__ == "__main__":
     .addCommand('pool fight', 'run solo fights', Pool.fight, [{'name': 'count', 'optional': True, 'type': int, 'min': 1, 'max': 100}, {'name': 'force', 'optional': True, 'list': [None, 'force']}])\
     .addCommand('pool ais', 'import ai/<pool>/<name>.leek files and load ai/<pool>/AI.leek', Pool.setupAI, [])\
     .addCommand('pool tournament', 'register for solo tournament', Pool.tournament, [])\
-    .addCommand('pool equip weapon', 'equip a weapon', Pool.equipWeapon, [{'name': 'item', 'type': int}])\
-    .addCommand('pool unequip weapon', 'unequip a weapon', Pool.unequipWeapon, [{'name': 'item', 'type': int}])\
-    .addCommand('pool equip chip', 'equip a chip', Pool.equipChip, [{'name': 'item', 'type': int}])\
-    .addCommand('pool unequip chip', 'unequip a chip', Pool.unequipChip, [{'name': 'item', 'type': int}])\
-    .addCommand('pool use potion', 'use a potion', Pool.usePotion, [{'name': 'potion', 'type': int}])\
+    .addCommand('pool equip weapon', 'equip a weapon', Pool.equipWeapon, [{'name': 'item'}])\
+    .addCommand('pool unequip weapon', 'unequip a weapon', Pool.unequipWeapon, [{'name': 'item'}])\
+    .addCommand('pool equip chip', 'equip a chip', Pool.equipChip, [{'name': 'item'}])\
+    .addCommand('pool unequip chip', 'unequip a chip', Pool.unequipChip, [{'name': 'item'}])\
+    .addCommand('pool use potion', 'use a potion', Pool.usePotion, [{'name': 'potion'}])\
     .addCommand('pool characteristics', 'buy characteristics', Pool.characteristics, [{'name': 'count', 'type': int}, {'name': 'type', 'list': ['life', 'strength', 'wisdom', 'agility', 'resistance', 'science', 'magic', 'tp', 'mp', 'frequency']}])\
-    .addCommand('pool buy', 'buy an item',Pool.buy, [{'name': 'item', 'type': int}])\
-    .addCommand('pool sell', 'sell an item',Pool.sell, [{'name': 'item', 'type': int}])\
+    .addCommand('pool buy', 'buy an item', Pool.buy, [{'name': 'item'}])\
+    .addCommand('pool sell', 'sell an item', Pool.sell, [{'name': 'item'}])\
     .addCommand('pool team join', 'join a team. owner must be register', Pool.teamJoin, [{'name': 'team', 'type': int}])\
     .addCommand('pool team composition', 'create a composition. a captain must be register', Pool.teamComposition, [{'name': 'composition'}])\
     .addCommand('pool team tournament', 'register composition for team tournament. based on first farmer team', Pool.teamTournament, [])\
