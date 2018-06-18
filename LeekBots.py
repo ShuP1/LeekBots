@@ -69,6 +69,45 @@ class Settings:
         self.save()
 
 
+class Items:
+    weapons = None
+    def getWeapons():
+        if Items.weapons == None:
+            Items.weapons = {}
+            weapons = lwapi.weapon.get_all()['weapons']
+            for weapon in weapons:
+                Items.weapons[int(weapon)] = weapons[weapon]['name']
+        return Items.weapons
+
+    chips = None
+    def getChips():
+        if Items.chips == None:
+            Items.chips = {}
+            chips = lwapi.chip.get_all()['chips']
+            for chip in chips:
+                Items.chips[int(chip)] = chips[chip]['name']
+        return Items.chips
+
+    potions = None
+    def getPotions():
+        if Items.potions == None:
+            Items.potions = {}
+            potions = lwapi.potion.get_all()['potions']
+            for potion in potions:
+                Items.potions[int(potion)] = potions[potion]['name']
+        return Items.potions
+
+    def getAll():
+        return {**Items.getWeapons(), **Items.getChips(), **Items.getPotions()}
+
+    def getName(id):
+        return Items.getAll().get(id, '?')
+
+    def getID(name):
+        items = Items.getAll()
+        return list(items.keys())[list(items.values()).index(name)]
+
+
 class Farmers:
     def login(login, password):
         r = lwapi.farmer.login_token(login, password)
@@ -340,6 +379,35 @@ class Pool:
             print('{0} : {1}, {2}, {3}'.format(field, min(
                 fields[field]), int(sum(fields[field]) / len(fields[field])),
                                                max(fields[field])))
+
+    def items(params, options):
+        mode = params[0]
+        items = {}
+        if mode == None:
+            mode = 'all'
+        try:
+            i=0
+            leeks = Pool.get(Settings(options), Pool.parse(options))
+            for leek in leeks:
+                itemList = []
+                if mode == 'all' or mode == 'weapons':
+                    itemList += leek.farmer.weapons
+                if mode == 'all' or mode == 'chips':
+                    itemList += leek.farmer.chips
+                if mode == 'all' or mode == 'potions':
+                    itemList += leek.farmer.potions
+                for item in itemList:
+                    if not item['template'] in items:
+                        items[item['template']] = [0]*len(leeks)
+                    items[item['template']][i] += 1
+                i+=1
+        except ValueError as err:
+            print(format(err))
+        print('item : min, avg, max')
+        for field in items:
+            print('{0} : {1}, {2}, {3}'.format(Items.getName(field), min(
+                items[field]), int(sum(items[field]) / len(items[field])),
+                                               max(items[field])))
 
     def fight(params, options):
         try:
@@ -961,6 +1029,7 @@ if __name__ == "__main__":
     .addCommand('pool register', 'add a leek to a pool',Pool.register, [{'name': 'leek'}])\
     .addCommand('pool list', 'list leeks',Pool.list, [{'name': 'mode', 'optional': True, 'list': [None, 'infos', 'stuff', 'characteristics']}])\
     .addCommand('pool stats', 'stats of pool\'s leeks', Pool.stats, [{'name': 'mode', 'list': ['infos', 'characteristics', 'farmers']}])\
+    .addCommand('pool items', 'list farmer\'s items', Pool.items, [{'name': 'mode', 'optional': True, 'list': ['all', 'potions', 'weapons', 'chips']}])\
     .addCommand('pool fight', 'run solo fights', Pool.fight, [{'name': 'count', 'optional': True, 'type': int, 'min': 1, 'max': 100}, {'name': 'force', 'optional': True, 'list': [None, 'force']}])\
     .addCommand('pool ais', 'import ai/<pool>/<name>.leek files and load ai/<pool>/AI.leek', Pool.setupAI, [])\
     .addCommand('pool tournament', 'register for solo tournament', Pool.tournament, [])\
