@@ -19,6 +19,7 @@ class CommandTree:
             print('Command {0}: Allready added'.format(path))
         return self
 
+    @staticmethod
     def checkOption(data, param, path):
         if not param is None:
             name = param.get('name', '')
@@ -38,7 +39,7 @@ class CommandTree:
                 if type(ptype) is type:
                     try:
                         data = ptype(data)
-                    except (TypeError, ValueError) as e:
+                    except (TypeError, ValueError):
                         print('Wrong type in "{0}", {1}"{2}" must be an {3}.'.
                               format(path, name, data, ptype.__name__))
                         return False

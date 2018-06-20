@@ -7,6 +7,7 @@ import random
 import time
 import os.path
 import json
+import itertools
 import APILeekwars as API
 from CommandTree import CommandTree
 
@@ -71,6 +72,8 @@ class Settings:
 
 class Items:
     weapons = None
+
+    @staticmethod
     def getWeapons():
         if Items.weapons == None:
             Items.weapons = {}
@@ -80,6 +83,8 @@ class Items:
         return Items.weapons
 
     chips = None
+
+    @staticmethod
     def getChips():
         if Items.chips == None:
             Items.chips = {}
@@ -89,6 +94,8 @@ class Items:
         return Items.chips
 
     potions = None
+
+    @staticmethod
     def getPotions():
         if Items.potions == None:
             Items.potions = {}
@@ -97,18 +104,22 @@ class Items:
                 Items.potions[int(potion)] = potions[potion]['name']
         return Items.potions
 
+    @staticmethod
     def getAll():
         return {**Items.getWeapons(), **Items.getChips(), **Items.getPotions()}
 
+    @staticmethod
     def getName(id):
         return Items.getAll().get(id, '?')
-        
+
+    @staticmethod
     def keyForValue(items, key):
         try:
             return list(items.keys())[list(items.values()).index(key)]
         except:
             raise ValueError('Unknown item "{0}"'.format(key))
 
+    @staticmethod
     def toID(items, key):
         if key.isdigit():
             key = int(key)
@@ -120,18 +131,21 @@ class Items:
 
 
 class Farmers:
+    @staticmethod
     def login(login, password):
         r = lwapi.farmer.login_token(login, password)
         if not r.get('success', False):
             raise ValueError('{0}: {1}'.format(login, r.get('error', 'Fail')))
         return Farmer(r)
 
+    @staticmethod
     def farmer(settings, id):
         login = settings.getFarmers().get(id)
         if login is None:
             raise ValueError('Can\'t find Farmer "{0}"'.format(id))
         return Farmers.login(login['login'], login['password'])
 
+    @staticmethod
     def farmerIn(settings, ids):
         for id in ids:
             login = settings.getFarmers().get(id)
@@ -139,6 +153,7 @@ class Farmers:
                 return Farmers.login(login['login'], login['password'])
         raise ValueError('Can\'t find any farmer')
 
+    @staticmethod
     def parse(options):
         farmer = options.get('farmer')
         if farmer is None:
@@ -146,6 +161,7 @@ class Farmers:
         print('Using "{0}" farmer'.format(farmer))
         return farmer
 
+    @staticmethod
     def get(settings):
         farmers = []
         logins = settings.getFarmers()
@@ -157,6 +173,7 @@ class Farmers:
                 print(format(err))
         return farmers
 
+    @staticmethod
     def list(params, options):
         mode = params[0]
         if mode is None:
@@ -183,6 +200,7 @@ class Farmers:
                             farmer.leeks[id]['level'],
                             farmer.leeks[id]['talent']))
 
+    @staticmethod
     def stats(params, options):
         print('Deprecated: use "pool stats"')
         mode = params[0]
@@ -197,6 +215,7 @@ class Farmers:
                 fields[field]), int(sum(fields[field]) / len(fields[field])),
                                                max(fields[field])))
 
+    @staticmethod
     def register(params, options):
         login = params[0]
         password = params[1]
@@ -207,6 +226,7 @@ class Farmers:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def buy(params, options):
         item = params[0]
         for farmer in Farmers.get(Settings(options)):
@@ -220,6 +240,7 @@ class Farmers:
             except ValueError as err:
                 print(format(err))
 
+    @staticmethod
     def sell(params, options):
         item = params[0]
         for farmer in Farmers.get(Settings(options)):
@@ -229,6 +250,7 @@ class Farmers:
             except ValueError as err:
                 print(format(err))
 
+    @staticmethod
     def tournament(params, options):
         try:
             farmer = Farmers.farmer(Settings(options), Farmers.parse(options))
@@ -237,6 +259,7 @@ class Farmers:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def fight(params, options):
         try:
             random.seed()
@@ -245,7 +268,7 @@ class Farmers:
                             if type(params[0]) is int else 20):
                 opponents = farmer.getOpponents()
                 if len(opponents) < 1:
-                    leek.raiseError('Probably, no more farmer fights')
+                    farmer.raiseError('Probably, no more farmer fights')
 
                 if options['selection-mode'] == 'random':
                     opid = random.choice(opponents)['id']
@@ -273,6 +296,7 @@ class Farmers:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def createLeek(params, options):
         name = params[0]
         try:
@@ -282,19 +306,50 @@ class Farmers:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
+    def twelve(params, options):
+        try:
+            farmer = Farmers.farmer(Settings(options), Farmers.parse(options))
+            buys = {}
+            for item in farmer.market().values():
+                buys['buy ' + item['name']] = -item['price_habs']
+
+            targetHabs = 121212 - farmer.habs
+
+            itemsCount = 0
+            haveTooMuch = True
+            while haveTooMuch:
+                print('With '+str(itemsCount)+' items')
+                haveTooMuch = False
+                for combination in itertools.combinations_with_replacement(buys, itemsCount):
+                    currentHabs = sum(buys[op] for op in combination)
+                    if currentHabs == targetHabs:
+                        print(combination)
+                        return
+                    elif currentHabs > targetHabs:
+                        haveTooMuch = True
+                itemsCount+=1
+
+            farmer.raiseError('OK')  #Ugly
+        except ValueError as err:
+            print(format(err))
+
 
 class Pools:
+    @staticmethod
     def list(params, options):
         print('TODO add params (leeks, ...)')
         print(', '.join(Settings(options).getPools()))
 
 
 class Pool:
+    @staticmethod
     def parse(options):
         pool = options.get('pool', 'main')
         print('Using "{0}" pool'.format(pool))
         return pool
 
+    @staticmethod
     def get(settings, pid):
         pool = settings.getPools().get(pid)
         farmers = settings.getFarmers()
@@ -311,12 +366,14 @@ class Pool:
                 print(format(err))
         return leeks
 
+    @staticmethod
     def create(params, options):
         try:
             Settings(options).addPool(Pool.parse(options))
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def register(params, options):
         try:
             pool = Pool.parse(options)
@@ -333,6 +390,7 @@ class Pool:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def list(params, options):
         try:
             for leek in Pool.get(Settings(options), Pool.parse(options)):
@@ -358,6 +416,7 @@ class Pool:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def stats(params, options):
         mode = params[0]
         if mode == 'infos':
@@ -391,6 +450,7 @@ class Pool:
                 fields[field]), int(sum(fields[field]) / len(fields[field])),
                                                max(fields[field])))
 
+    @staticmethod
     def items(params, options):
         mode = params[0]
         items = {}
@@ -420,6 +480,7 @@ class Pool:
                 items[field]), int(sum(items[field]) / len(items[field])),
                                                max(items[field])))
 
+    @staticmethod
     def fight(params, options):
         try:
             random.seed()
@@ -478,6 +539,7 @@ class Pool:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def setupAI(params, options):
         try:
             pool = Pool.parse(options)
@@ -521,6 +583,7 @@ class Pool:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def tournament(params, options):
         try:
             for leek in Pool.get(Settings(options), Pool.parse(options)):
@@ -532,6 +595,7 @@ class Pool:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def equipWeapon(params, options):
         try:
             template = Items.toID(Items.getWeapons(), params[0])
@@ -553,6 +617,7 @@ class Pool:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def unequipWeapon(params, options):
         try:
             template = Items.toID(Items.getWeapons(), params[0])
@@ -574,6 +639,7 @@ class Pool:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def equipChip(params, options):
         try:
             template = Items.toID(Items.getChips(), params[0])
@@ -595,6 +661,7 @@ class Pool:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def unequipChip(params, options):
         try:
             template = Items.toID(Items.getChips(), params[0])
@@ -616,6 +683,7 @@ class Pool:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def usePotion(params, options):
         try:
             template = Items.toID(Items.getPotions(), params[0])
@@ -637,6 +705,7 @@ class Pool:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def buy(params, options):
         try:
             item = Items.toID(Items.getAll(), params[0])
@@ -653,6 +722,7 @@ class Pool:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def sell(params, options):
         try:
             item = Items.toID(Items.getAll(), params[0])
@@ -665,6 +735,7 @@ class Pool:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def characteristics(params, options):
         bonuses = {
             'life': 0,
@@ -689,6 +760,7 @@ class Pool:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def teamJoin(params, options):
         team = params[0]
         try:
@@ -708,6 +780,7 @@ class Pool:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def teamComposition(params, options):
         try:
             leeks = Pool.get(Settings(options), Pool.parse(options))
@@ -726,6 +799,7 @@ class Pool:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def teamTournament(params, options):
         try:
             leek = Pool.get(Settings(options), Pool.parse(options))[0]
@@ -740,6 +814,7 @@ class Pool:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def teamEmblem(params, options):
         try:
             leek = Pool.get(Settings(options), Pool.parse(options))[0]
@@ -749,6 +824,7 @@ class Pool:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def teamFight(params, options):
         try:
             random.seed()
@@ -791,6 +867,7 @@ class Pool:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def auto(params, options):
         Pool.fight([None, None], options)
         Pool.fight([None, 'force'], options)
@@ -799,6 +876,7 @@ class Pool:
         Pool.tournament([], options)
         Pool.teamTournament([], options)
 
+    @staticmethod
     def farmersTournament(params, options):
         try:
             for leek in Pool.get(Settings(options), Pool.parse(options)):
@@ -810,6 +888,7 @@ class Pool:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def farmersAvatar(params, options):
         try:
             for leek in Pool.get(Settings(options), Pool.parse(options)):
@@ -823,15 +902,17 @@ class Pool:
 
 
 class Team:
+    @staticmethod
     def create(params, options):
         name = params[0]
         try:
-            farmer = Farmers.farmer(params[1])
+            farmer = Farmers.farmer(Settings(options), Farmers.parse(options))
             farmer.createTeam(name)
             farmer.raiseError('OK')  #Ugly
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
     def get(team):
         req = lwapi.team.get(team)
         if not req.get('success', False):
@@ -839,12 +920,14 @@ class Team:
                                                      req.get('error', 'Fail')))
         return req['team']
 
+    @staticmethod
     def getOwner(team):
         for member in Team.get(team)['members']:
             if member['grade'] == 'owner':
                 return str(member['id'])
         raise ValueError('Team {0} : Can\'t find owner'.format(team))
 
+    @staticmethod
     def getCaptains(team):
         captains = []
         for member in Team.get(team)['members']:
@@ -860,6 +943,7 @@ class Farmer:
 
         self.id = self.data['id']
         self.name = self.data['name']
+        self.habs = self.data['habs']
         self.weapons = self.data['weapons']
         self.chips = self.data['chips']
         self.potions = self.data['potions']
@@ -879,6 +963,9 @@ class Farmer:
 
     def sell(self, item):
         self.checkRequest(lwapi.market.sell_habs(item, self.token))
+
+    def market(self):
+        return self.checkRequest(lwapi.market.get_item_templates(self.token))['items']
 
     def getLeek(self, leek):
         return Leek(
@@ -1035,6 +1122,7 @@ if __name__ == "__main__":
     .addCommand('farmer fight', 'run farmer fights', Farmers.fight, [{'name': 'count', 'optional': True, 'type': int, 'min': 1, 'max': 20}])\
     .addCommand('farmer tournament', 'register farmer to tournament', Farmers.tournament, [])\
     .addCommand('farmer create leek', 'create a new leek for farmer', Farmers.createLeek, [{'name': 'name'}])\
+    .addCommand('farmer twelve', 'helper', Farmers.twelve, [])\
     .addCommand('pools list', 'list all pools',Pools.list, [])\
     .addCommand('pool create', 'create a new pool',Pool.create, [])\
     .addCommand('pool register', 'add a leek to a pool',Pool.register, [{'name': 'leek'}])\
