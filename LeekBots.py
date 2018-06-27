@@ -334,6 +334,44 @@ class Farmers:
         except ValueError as err:
             print(format(err))
 
+    @staticmethod
+    def rankingLeeks(params, options):
+        try:
+            leeks = {}
+            for farmer in Farmers.get(Settings(options)):
+                for leek in farmer.leeks.values():
+                    leeks[leek['name']] = leek['talent']
+
+            for w in sorted(leeks, key=leeks.get, reverse=True):
+                print(w, str(leeks[w]))
+        except ValueError as err:
+            print(format(err))
+
+    @staticmethod
+    def ranking(params, options):
+        try:
+            farmers = {}
+            for farmer in Farmers.get(Settings(options)):
+                farmers[farmer.name] = farmer.talent
+
+            for w in sorted(farmers, key=farmers.get, reverse=True):
+                print(w, str(farmers[w]))
+        except ValueError as err:
+            print(format(err))
+
+    @staticmethod
+    def rankingTeams(params, options):
+        try:
+            teams = {}
+            for farmer in Farmers.get(Settings(options)):
+                team = Team.get(farmer.data['team']['id'])
+                teams[team['name']] = team['talent']
+
+            for w in sorted(teams, key=teams.get, reverse=True):
+                print(w, str(teams[w]))
+        except ValueError as err:
+            print(format(err))
+
 
 class Pools:
     @staticmethod
@@ -949,6 +987,7 @@ class Farmer:
         self.potions = self.data['potions']
         self.leeks = self.data['leeks']
         self.fights = self.data['fights']
+        self.talent = self.data['talent']
 
     def raiseError(self, error):
         raise ValueError('Farmer {0} : {1}'.format(self.name, error))
@@ -1149,4 +1188,7 @@ if __name__ == "__main__":
     .addCommand('pool farmers tournament', 'register each farmer to tournament', Pool.farmersTournament, [])\
     .addCommand('pool auto', 'run "fight, fight force, team fight, tournament, team tournament"', Pool.auto, [])\
     .addCommand('team create', 'create a team', Team.create, [{'name': 'name'}, {'name': 'owner'}])\
+    .addCommand('ranking leeks', 'get ranking of all leeks', Farmers.rankingLeeks, [])\
+    .addCommand('ranking farmers', 'get ranking of all farmers', Farmers.ranking, [])\
+    .addCommand('ranking teams', 'get ranking of all farmers', Farmers.rankingTeams, [])\
     .parse(sys.argv)
