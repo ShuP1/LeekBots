@@ -211,9 +211,10 @@ class Farmers:
                 fields[field].append(farmer.data[field])
         print('value : min, avg, max')
         for field in fields:
-            print('{0} : {1}, {2}, {3}'.format(field, min(
-                fields[field]), int(sum(fields[field]) / len(fields[field])),
-                                               max(fields[field])))
+            print('{0} : {1}, {2}, {3}'.format(
+                field, min(fields[field]),
+                int(sum(fields[field]) / len(fields[field])),
+                max(fields[field])))
 
     @staticmethod
     def register(params, options):
@@ -264,8 +265,7 @@ class Farmers:
         try:
             random.seed()
             farmer = Farmers.farmer(Settings(options), Farmers.parse(options))
-            for _ in range(params[0]
-                            if type(params[0]) is int else 20):
+            for _ in range(params[0] if type(params[0]) is int else 20):
                 opponents = farmer.getOpponents()
                 if len(opponents) < 1:
                     farmer.raiseError('Probably, no more farmer fights')
@@ -279,13 +279,10 @@ class Farmers:
                     else:
                         optalent = 0
                     for x in opponents:
-                        if (
-                            options['selection-mode'] == 'worst'
-                            and optalent > x['talent']
-                        ) or (
-                            not options['selection-mode'] == 'worst'
-                            and optalent < x['talent']
-                        ):
+                        if (options['selection-mode'] == 'worst'
+                                and optalent > x['talent']) or (
+                                    not options['selection-mode'] == 'worst'
+                                    and optalent < x['talent']):
                             opid = x['id']
                             optalent = x['talent']
 
@@ -319,16 +316,17 @@ class Farmers:
             itemsCount = 0
             haveTooMuch = True
             while haveTooMuch:
-                print('With '+str(itemsCount)+' items')
+                print('With ' + str(itemsCount) + ' items')
                 haveTooMuch = False
-                for combination in itertools.combinations_with_replacement(buys, itemsCount):
+                for combination in itertools.combinations_with_replacement(
+                        buys, itemsCount):
                     currentHabs = sum(buys[op] for op in combination)
                     if currentHabs == targetHabs:
                         print(combination)
                         return
                     elif currentHabs > targetHabs:
                         haveTooMuch = True
-                itemsCount+=1
+                itemsCount += 1
 
             farmer.raiseError('OK')  #Ugly
         except ValueError as err:
@@ -484,9 +482,10 @@ class Pool:
             print(format(err))
         print('value : min, avg, max')
         for field in fields:
-            print('{0} : {1}, {2}, {3}'.format(field, min(
-                fields[field]), int(sum(fields[field]) / len(fields[field])),
-                                               max(fields[field])))
+            print('{0} : {1}, {2}, {3}'.format(
+                field, min(fields[field]),
+                int(sum(fields[field]) / len(fields[field])),
+                max(fields[field])))
 
     @staticmethod
     def items(params, options):
@@ -495,7 +494,7 @@ class Pool:
         if mode == None:
             mode = 'all'
         try:
-            i=0
+            i = 0
             leeks = Pool.get(Settings(options), Pool.parse(options))
             for leek in leeks:
                 itemList = []
@@ -507,16 +506,16 @@ class Pool:
                     itemList += leek.farmer.potions
                 for item in itemList:
                     if not item['template'] in items:
-                        items[item['template']] = [0]*len(leeks)
+                        items[item['template']] = [0] * len(leeks)
                     items[item['template']][i] += 1
-                i+=1
+                i += 1
         except ValueError as err:
             print(format(err))
         print('item : min, avg, max')
         for field in items:
-            print('{0} : {1}, {2}, {3}'.format(Items.getName(field), min(
-                items[field]), int(sum(items[field]) / len(items[field])),
-                                               max(items[field])))
+            print('{0} : {1}, {2}, {3}'.format(
+                Items.getName(field), min(items[field]),
+                int(sum(items[field]) / len(items[field])), max(items[field])))
 
     @staticmethod
     def fight(params, options):
@@ -528,7 +527,8 @@ class Pool:
             force = (params[1] == 'force')
             for leek in leeks:
                 try:
-                    fights = params[0] if type(params[0]) is int else leek.farmer.fights
+                    fights = params[0] if type(
+                        params[0]) is int else leek.farmer.fights
                     if fights < 1:
                         leek.raiseError('No more fights')
 
@@ -556,13 +556,10 @@ class Pool:
                             for x in opponents:
                                 if force or not x['id'] in leeksids:
                                     score = x['level'] * x['talent']
-                                    if (
-                                        options['selection-mode'] == 'worst'
-                                        and score < opscore
-                                    ) or (
-                                        not options['selection-mode'] == 'worst'
-                                        and score > opscore
-                                    ):
+                                    if (options['selection-mode'] == 'worst'
+                                            and score < opscore
+                                        ) or (not options['selection-mode'] ==
+                                              'worst' and score > opscore):
                                         opid = x['id']
                                         opscore = score
                             if opid is None:
@@ -645,8 +642,13 @@ class Pool:
                             wid = weapon['id']
 
                     if wid is None:
-                        leek.farmer.raiseError(
-                            'Have any {0} available'.format(template))
+                        if options['buy']:
+                            print(leek.farmer.name + ' buy')
+                            wid = leek.farmer.buy(template)
+                        else:
+                            leek.farmer.raiseError(
+                                'Have any {0} available. (use --buy)'.format(
+                                    template))
 
                     leek.equipWeapon(wid)
                     leek.raiseError('OK')  #Ugly
@@ -689,8 +691,13 @@ class Pool:
                             wid = chip['id']
 
                     if wid is None:
-                        leek.farmer.raiseError(
-                            'Have any {0} available'.format(template))
+                        if options['buy']:
+                            print(leek.farmer.name + ' buy')
+                            wid = leek.farmer.buy(template)
+                        else:
+                            leek.farmer.raiseError(
+                                'Have any {0} available. (use --buy)'.format(
+                                    template))
 
                     leek.equipChip(wid)
                     leek.raiseError('OK')  #Ugly
@@ -733,8 +740,13 @@ class Pool:
                             pid = potion['id']
 
                     if pid is None:
-                        leek.farmer.raiseError(
-                            'Have any {0} available'.format(template))
+                        if options['buy']:
+                            print(leek.farmer.name + ' buy')
+                            pid = leek.farmer.buy(template)
+                        else:
+                            leek.farmer.raiseError(
+                                'Have any {0} available. (use --buy)'.format(
+                                    template))
 
                     leek.usePotion(pid)
                     leek.raiseError('OK')  #Ugly
@@ -802,7 +814,7 @@ class Pool:
     def teamJoin(params, options):
         team = params[0]
         try:
-            owner = Farmers.farmer(Settings(options),  Team.getOwner(team))
+            owner = Farmers.farmer(Settings(options), Team.getOwner(team))
             owner.openTeam('true')
             for leek in Pool.get(Settings(options), Pool.parse(options)):
                 try:
@@ -847,7 +859,7 @@ class Pool:
                 cleeks = [x['id'] for x in composition['leeks']]
                 if leek.id in cleeks:
                     owner.tournamentTeamComposition(composition['id'])
-                    leek.raiseError('OK') #Ugly
+                    leek.raiseError('OK')  #Ugly
             leek.raiseError('Can\'t find composition')
         except ValueError as err:
             print(format(err))
@@ -873,7 +885,7 @@ class Pool:
                 if leek.id in cleeks:
                     cid = composition['id']
                     for _ in range(params[0]
-                                    if type(params[0]) is int else 20):
+                                   if type(params[0]) is int else 20):
                         opponents = leek.getCompositionOpponents(cid)
                         if len(opponents) < 1:
                             leek.raiseError('Probably, no more team fights')
@@ -888,12 +900,10 @@ class Pool:
                                 optalent = 0
                             for x in opponents:
                                 if (
-                                    options['selection-mode'] == 'worst'
-                                    and optalent > x['talent']
-                                ) or (
-                                    not options['selection-mode'] == 'worst'
-                                    and optalent < x['talent']
-                                ):
+                                        options['selection-mode'] == 'worst'
+                                        and optalent > x['talent']
+                                ) or (not options['selection-mode'] == 'worst'
+                                      and optalent < x['talent']):
                                     opid = x['id']
                                     optalent = x['talent']
 
@@ -909,7 +919,7 @@ class Pool:
     def auto(params, options):
         Pool.fight([None, None], options)
         Pool.fight([None, 'force'], options)
-        time.sleep(options['sleep']*10)
+        time.sleep(options['sleep'] * 10)
         Pool.teamFight([None], options)
         Pool.tournament([], options)
         Pool.teamTournament([], options)
@@ -998,13 +1008,15 @@ class Farmer:
         return req
 
     def buy(self, item):
-        self.checkRequest(lwapi.market.buy_habs(item, self.token))
+        return self.checkRequest(lwapi.market.buy_habs(item,
+                                                       self.token))['item']
 
     def sell(self, item):
         self.checkRequest(lwapi.market.sell_habs(item, self.token))
 
     def market(self):
-        return self.checkRequest(lwapi.market.get_item_templates(self.token))['items']
+        return self.checkRequest(lwapi.market.get_item_templates(
+            self.token))['items']
 
     def getLeek(self, leek):
         return Leek(
@@ -1025,7 +1037,8 @@ class Farmer:
     def saveAi(self, ai, script):
         ai = self.checkRequest(lwapi.ai.save(ai, script, self.token))['result']
         if len(ai[0]) > 3:
-            self.raiseError('Script error ('+', '.join(str(x) for x in ai[0][3:])+')')
+            self.raiseError('Script error (' + ', '.join(
+                str(x) for x in ai[0][3:]) + ')')
 
     def joinTeam(self, team):
         self.checkRequest(lwapi.team.send_candidacy(team, self.token))
@@ -1056,19 +1069,22 @@ class Farmer:
             lwapi.team.delete_composition(composition, self.token))
 
     def tournamentTeamComposition(self, composition):
-        self.checkRequest(lwapi.team.register_tournament(composition, self.token))
+        self.checkRequest(
+            lwapi.team.register_tournament(composition, self.token))
 
     def tournament(self):
         self.checkRequest(lwapi.farmer.register_tournament(self.token))
 
     def fight(self, target):
-        return self.checkRequest(lwapi.garden.start_farmer_fight(target, self.token))
+        return self.checkRequest(
+            lwapi.garden.start_farmer_fight(target, self.token))
 
     def avatar(self, avatar):
         return self.checkRequest(lwapi.farmer.set_avatar(avatar, self.token))
 
     def teamEmblem(self, team, emblem):
-        return self.checkRequest(lwapi.team.set_emblem(team, emblem, self.token))
+        return self.checkRequest(
+            lwapi.team.set_emblem(team, emblem, self.token))
 
     def createLeek(self, name):
         return self.checkRequest(lwapi.leek.create(name, self.token))
@@ -1127,7 +1143,8 @@ class Leek:
         self.checkRequest(lwapi.leek.remove_chip(wid, self.farmer.token))
 
     def usePotion(self, pid):
-        self.checkRequest(lwapi.leek.use_potion(self.id, pid, self.farmer.token))
+        self.checkRequest(
+            lwapi.leek.use_potion(self.id, pid, self.farmer.token))
 
     def characteristics(self, bonuses):
         self.checkRequest(
@@ -1152,6 +1169,7 @@ if __name__ == "__main__":
     .addOption('farmer', ['f', '-farmer'], {'name': 'farmer (id)', 'optional': True})\
     .addOption('selection-mode', ['sm', '-selection-mode'], {'name': 'selection mode', 'optional': True, 'list': ['random', 'best', 'worst'], 'default': 'worst'})\
     .addOption('sleep', ['s', '-sleep'], {'name': 'sleep time', 'optional': True, 'type': int, 'min': 0, 'default': 1})\
+    .addOption('buy', ['b', '-buy'], {'name': 'should buy', 'optional': True, 'type': bool, 'default': False})\
     .addOption('path', ['-path'], {'name': 'config path', 'optional': True, 'default': '*/LeekBots.json'})\
     .addCommand('farmers list', 'list all farmers', Farmers.list, [{'name': 'mode', 'optional': True, 'list': [None, 'infos', 'ais', 'stuff', 'leeks']}])\
     .addCommand('farmers stats', 'stats of all farmers', Farmers.stats, [{'name': 'mode', 'list': ['infos']}])\

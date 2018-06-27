@@ -27,9 +27,9 @@ class CommandTree:
                 name += ':'
             if data is None:
                 if not param.get('optional', False):
-                    print('Wrong params count in "{0}", {1} isn\'t optional.'.
-                          format(path, name))
-                    return False
+                    raise ValueError(
+                        'Wrong params count in "{0}", {1} isn\'t optional.'.
+                        format(path, name))
                 else:
                     pdef = param.get('default')
                     if not pdef is None:
@@ -40,41 +40,39 @@ class CommandTree:
                     try:
                         data = ptype(data)
                     except (TypeError, ValueError):
-                        print('Wrong type in "{0}", {1}"{2}" must be an {3}.'.
-                              format(path, name, data, ptype.__name__))
-                        return False
+                        raise ValueError(
+                            'Wrong type in "{0}", {1}"{2}" must be an {3}.'.
+                            format(path, name, data, ptype.__name__))
                     if ptype == int:
                         pmin = param.get('min')
                         if type(pmin) is int:
                             if data < pmin:
-                                print(
+                                raise ValueError(
                                     'Wrong value in "{0}", {1}"{2}" must be >= {3}.'.
                                     format(path, name, data, pmin))
-                                return False
                         pmax = param.get('max')
                         if type(pmax) is int:
                             if data > pmax:
-                                print(
+                                raise ValueError(
                                     'Wrong value in "{0}", {1}"{2}" must be <= {3}.'.
                                     format(path, name, data, pmax))
-                                return False
                 plist = param.get('list')
                 if type(plist) is list:
                     if not data in plist:
-                        print(
+                        raise ValueError(
                             'Wrong value in "{0}", {1}"{2}" must be one of ({3}).'.
                             format(path, name, data, ', '.join(
                                 str(x) for x in plist)))
-                        return False
         else:
-            print('"{0}" doesn\'t accepts so many params.'.format(path))
-            return False
+            raise ValueError(
+                '"{0}" doesn\'t accepts so many params.'.format(path))
         return data
 
     def runCommand(self, path, args, options):
         command = self.commands[path]
         params = []
-        for data, param in itertools.zip_longest(args[len(path.split()):], command['params']):
+        for data, param in itertools.zip_longest(args[len(path.split()):],
+                                                 command['params']):
             data = CommandTree.checkOption(data, param, path)
             if data is False:
                 return
@@ -109,9 +107,15 @@ class CommandTree:
                 option = path.pop(0)[1:]
                 for key in self.options:
                     if option in self.options[key]['names']:
-                        data = CommandTree.checkOption(
-                            path.pop(0), self.options[key]['check'], option)
-                        if data is False:
+                        try:
+                            value = True
+                            if not self.options[key]['check'].get('type') == bool:
+                                value = path.pop(0)
+                            data = CommandTree.checkOption(
+                                value, self.options[key]['check'],
+                                option)
+                        except ValueError as err:
+                            print(format(err))
                             return
                         options[key] = data
                         option = None
@@ -119,11 +123,12 @@ class CommandTree:
                     print('Unknown option "{0}"'.format(option))
                     return
         for key in self.options:
-            data = CommandTree.checkOption(
-                options.get(key), self.options[key]['check'], key)
-            if data is False:
+            try:
+                options[key] = CommandTree.checkOption(
+                    options.get(key), self.options[key]['check'], key)
+            except ValueError as err:
+                print(format(err))
                 return
-            options[key] = data
         commands = list(self.commands.keys())
         if len(path) > 0:
             run = self.runCommand
